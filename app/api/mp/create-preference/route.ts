@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
                         title: slot.service ?? 'Turno',
                         quantity: 1,
                         unit_price: slot.price,
+                        currency_id: 'ARS',
                     },
                 ],
                 {
