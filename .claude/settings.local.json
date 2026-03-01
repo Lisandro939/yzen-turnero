@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:yzen.vercel.app)",
+      "Bash(pnpm build:*)",
+      "WebFetch(domain:exactly.ai)",
+      "WebSearch",
+      "Bash(pnpm add next-auth)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm add @libsql/client)",
+      "Bash(pnpm add -D tsx dotenv)",
+      "Bash(pnpm db:migrate)",
+      "Bash(pnpm db:seed)",
+      "Bash(pnpm add next-auth@beta mercadopago)",
+      "Bash(pnpm remove @react-oauth/google)"
+    ]
+  }
+}

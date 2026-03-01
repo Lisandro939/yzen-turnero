@@ -1,0 +1,42 @@
+import Link from 'next/link';
+import type { Slot } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+
+interface SlotCardProps {
+  slot: Slot;
+  businessSlug: string;
+}
+
+export function SlotCard({ slot, businessSlug }: SlotCardProps) {
+  const isOpen = slot.status === 'open';
+
+  return (
+    <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
+      isOpen
+        ? 'border-indigo-200 bg-indigo-50/50 hover:border-indigo-300 hover:bg-indigo-50'
+        : 'border-slate-100 bg-slate-50/50 opacity-60'
+    }`}>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-800 font-semibold">
+            {slot.startTime} – {slot.endTime}
+          </span>
+          <Badge status={slot.status} />
+        </div>
+        {slot.service && (
+          <span className="text-slate-500 text-sm">{slot.service}</span>
+        )}
+        <span className="text-indigo-500 text-sm font-medium">
+          ${slot.price.toLocaleString('es-AR')}
+        </span>
+      </div>
+
+      {isOpen && (
+        <Link href={`/${businessSlug}/book?slotId=${slot.id}`}>
+          <Button size="sm">Reservar</Button>
+        </Link>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,212 @@
+'use client';
+
+import { useState } from 'react';
+import type { Business, BusinessCategory } from '@/types';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
+import { Button } from '@/components/ui/Button';
+
+export interface BusinessFormValues {
+  name: string;
+  category: BusinessCategory;
+  description: string;
+  imageUrl: string;
+  slotDuration: 30 | 45 | 60;
+  basePrice: number;
+  workingDays: number[];
+  workingHoursStart: string;
+  workingHoursEnd: string;
+}
+
+interface BusinessFormProps {
+  mode: 'create' | 'edit';
+  initialValues?: Partial<Business>;
+  onSubmit: (values: BusinessFormValues) => void;
+  loading?: boolean;
+  submitLabel?: string;
+}
+
+const CATEGORIES: BusinessCategory[] = [
+  'Barbería', 'Medicina', 'Entrenamiento', 'Belleza',
+  'Odontología', 'Psicología', 'Nutrición', 'Yoga', 'Otro',
+];
+
+const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const DURATION_OPTIONS = [
+  { value: '30', label: '30 minutos' },
+  { value: '45', label: '45 minutos' },
+  { value: '60', label: '60 minutos' },
+];
+
+const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: c }));
+
+function defaults(init?: Partial<Business>): BusinessFormValues {
+  return {
+    name: init?.name ?? '',
+    category: init?.category ?? 'Otro',
+    description: init?.description ?? '',
+    imageUrl: init?.imageUrl ?? '',
+    slotDuration: init?.slotDuration ?? 30,
+    basePrice: init?.basePrice ?? 0,
+    workingDays: init?.workingDays ?? [1, 2, 3, 4, 5],
+    workingHoursStart: init?.workingHoursStart ?? '09:00',
+    workingHoursEnd: init?.workingHoursEnd ?? '18:00',
+  };
+}
+
+export function BusinessForm({ mode, initialValues, onSubmit, loading, submitLabel }: BusinessFormProps) {
+  const [form, setForm] = useState<BusinessFormValues>(defaults(initialValues));
+  const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormValues, string>>>({});
+
+  function validate(): boolean {
+    const e: Partial<Record<keyof BusinessFormValues, string>> = {};
+    if (!form.name.trim() || form.name.trim().length < 3) e.name = 'Mínimo 3 caracteres';
+    if (!form.description.trim()) e.description = 'La descripción es requerida';
+    if (form.basePrice <= 0) e.basePrice = 'El precio debe ser mayor a 0';
+    if (form.workingDays.length === 0) e.workingDays = 'Seleccioná al menos un día';
+    if (form.workingHoursStart >= form.workingHoursEnd) e.workingHoursEnd = 'El horario de fin debe ser posterior al inicio';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (validate()) onSubmit(form);
+  }
+
+  function toggleDay(day: number) {
+    setForm((f) => ({
+      ...f,
+      workingDays: f.workingDays.includes(day)
+        ? f.workingDays.filter((d) => d !== day)
+        : [...f.workingDays, day].sort((a, b) => a - b),
+    }));
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+
+      {/* ── Sección 1: Información ── */}
+      <div>
+        <h3 className="text-slate-700 font-semibold mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-500 text-xs flex items-center justify-center font-bold">1</span>
+          Información del negocio
+        </h3>
+        <div className="flex flex-col gap-4">
+          <Input
+            label="Nombre del negocio"
+            placeholder="Ej: Barbería El Centro"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            error={errors.name}
+          />
+          <Select
+            label="Categoría"
+            options={CATEGORY_OPTIONS}
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value as BusinessCategory })}
+          />
+          <Textarea
+            label="Descripción"
+            placeholder="Contá brevemente qué servicios ofrecés..."
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            error={errors.description}
+          />
+          <Input
+            label="URL de imagen (opcional)"
+            placeholder="https://..."
+            value={form.imageUrl}
+            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/* ── Sección 2: Turnos ── */}
+      <div>
+        <h3 className="text-slate-700 font-semibold mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-500 text-xs flex items-center justify-center font-bold">2</span>
+          Configuración de turnos
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Duración de turno"
+            options={DURATION_OPTIONS}
+            value={String(form.slotDuration)}
+            onChange={(e) => setForm({ ...form, slotDuration: Number(e.target.value) as 30 | 45 | 60 })}
+          />
+          <Input
+            label="Precio base ($)"
+            type="text"
+            inputMode="numeric"
+            placeholder="1500"
+            value={form.basePrice || ''}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              setForm({ ...form, basePrice: raw ? parseInt(raw, 10) : 0 });
+            }}
+            error={errors.basePrice}
+          />
+        </div>
+      </div>
+
+      {/* ── Sección 3: Horarios ── */}
+      <div>
+        <h3 className="text-slate-700 font-semibold mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-500 text-xs flex items-center justify-center font-bold">3</span>
+          Horario de atención
+        </h3>
+
+        <div className="flex flex-col gap-4">
+          {/* Days */}
+          <div>
+            <p className="text-sm font-medium text-slate-600 mb-2">Días de atención</p>
+            <div className="flex gap-2 flex-wrap">
+              {DAY_LABELS.map((label, day) => {
+                const active = form.workingDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${
+                      active
+                        ? 'bg-indigo-50 text-indigo-600 border-indigo-300'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.workingDays && <p className="text-xs text-rose-500 mt-1">{errors.workingDays}</p>}
+          </div>
+
+          {/* Hours */}
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Desde"
+              type="time"
+              value={form.workingHoursStart}
+              onChange={(e) => setForm({ ...form, workingHoursStart: e.target.value })}
+            />
+            <Input
+              label="Hasta"
+              type="time"
+              value={form.workingHoursEnd}
+              onChange={(e) => setForm({ ...form, workingHoursEnd: e.target.value })}
+              error={errors.workingHoursEnd}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Button type="submit" size="lg" loading={loading} className="w-full">
+        {submitLabel ?? (mode === 'create' ? 'Crear negocio' : 'Guardar cambios')}
+      </Button>
+    </form>
+  );
+}
