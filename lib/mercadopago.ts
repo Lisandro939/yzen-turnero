@@ -47,7 +47,7 @@ export function getMPClient(accessToken: string): MercadoPagoConfig {
 
 export async function createPaymentPreference(
     accessToken: string,
-    items: { title: string; quantity: number; unit_price: number }[],
+    items: { id: string; title: string; quantity: number; unit_price: number }[],
     backUrls: { success: string; failure: string; pending: string },
     notificationUrl: string,
 ): Promise<{ id: string; initPoint: string; sandboxInitPoint: string }> {

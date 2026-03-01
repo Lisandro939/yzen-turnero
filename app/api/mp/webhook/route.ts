@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
             accessToken: process.env.MP_PLATFORM_ACCESS_TOKEN!,
         });
         const payment = new Payment(client);
-        const paymentData = await payment.get({ id: dataId });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const paymentData = await payment.get({ id: dataId }) as any;
 
         const preferenceId = paymentData.preference_id;
         const mpStatus = paymentData.status;

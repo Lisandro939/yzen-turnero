@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date');
 
     let sql = 'SELECT * FROM slots WHERE 1=1';
-    const args: unknown[] = [];
+    const args: string[] = [];
 
     if (businessId) {
       sql += ' AND business_id = ?';

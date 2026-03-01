@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
                FROM bookings b
                LEFT JOIN slots s ON s.id = b.slot_id
                WHERE 1=1`;
-    const args: unknown[] = [];
+    const args: string[] = [];
 
     if (businessId) {
       sql += ' AND b.business_id = ?';

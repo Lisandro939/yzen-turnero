@@ -16,6 +16,9 @@ const FIELD_MAP: Record<keyof Omit<Business, 'id' | 'slug'>, string> = {
   workingHoursEnd: 'working_hours_end',
   slotDuration: 'slot_duration',
   basePrice: 'base_price',
+  mpAccessToken: 'mp_access_token',
+  mpRefreshToken: 'mp_refresh_token',
+  mpUserId: 'mp_user_id',
 };
 
 export async function PATCH(request: NextRequest, { params }: Context) {
@@ -24,13 +27,13 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const body: Partial<Business> = await request.json();
 
     const sets: string[] = [];
-    const args: unknown[] = [];
+    const args: (string | number | null)[] = [];
 
     for (const [jsKey, dbCol] of Object.entries(FIELD_MAP)) {
       if (jsKey in body) {
         sets.push(`${dbCol} = ?`);
         const val = body[jsKey as keyof typeof body];
-        args.push(jsKey === 'workingDays' ? JSON.stringify(val) : val);
+        args.push(jsKey === 'workingDays' ? JSON.stringify(val) : (val ?? null) as string | number | null);
       }
     }
 

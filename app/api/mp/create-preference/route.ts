@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
                 business.mpAccessToken,
                 [
                     {
+                        id: slot.id,
                         title: slot.service ?? 'Turno',
                         quantity: 1,
                         unit_price: slot.price,
