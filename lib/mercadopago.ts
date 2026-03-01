@@ -57,7 +57,6 @@ export async function createPaymentPreference(
         body: {
             items,
             back_urls: backUrls,
-            auto_return: 'approved',
             notification_url: notificationUrl,
         },
     });

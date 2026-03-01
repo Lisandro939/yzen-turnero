@@ -44,6 +44,14 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     args.push(id);
     await db.execute({ sql: `UPDATE businesses SET ${sets.join(', ')} WHERE id = ?`, args });
 
+    // If basePrice changed, sync open slots to the new price
+    if ('basePrice' in body && body.basePrice !== undefined) {
+      await db.execute({
+        sql: "UPDATE slots SET price = ? WHERE business_id = ? AND status = 'open'",
+        args: [body.basePrice, id],
+      });
+    }
+
     const result = await db.execute({ sql: 'SELECT * FROM businesses WHERE id = ?', args: [id] });
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
