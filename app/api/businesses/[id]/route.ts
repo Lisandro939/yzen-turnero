@@ -4,6 +4,16 @@ import type { Business } from '@/types';
 
 type Context = { params: Promise<{ id: string }> };
 
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
 const FIELD_MAP: Record<keyof Omit<Business, 'id' | 'slug'>, string> = {
   name: 'name',
   description: 'description',
@@ -39,6 +49,12 @@ export async function PATCH(request: NextRequest, { params }: Context) {
 
     if (sets.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    // If name changed, also update the slug
+    if ('name' in body && body.name) {
+      sets.push('slug = ?');
+      args.push(nameToSlug(body.name));
     }
 
     args.push(id);

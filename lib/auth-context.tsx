@@ -58,9 +58,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     async function updateBusiness(businessId: string, data: Partial<Business>) {
-        await api.updateBusiness(businessId, data);
+        const updated = await api.updateBusiness(businessId, data);
         setBusinesses((prev) =>
-            prev.map((b) => (b.id === businessId ? { ...b, ...data } : b)),
+            prev.map((b) => (b.id === businessId ? updated : b)),
         );
     }
 

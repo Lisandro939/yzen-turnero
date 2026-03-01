@@ -9,7 +9,7 @@ const navItems = [
   { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarIcon },
   { href: '/dashboard/bookings', label: 'Reservas', icon: ListIcon },
   { href: '/dashboard/customers', label: 'Clientes', icon: UsersIcon },
-  { href: '/dashboard/settings', label: 'Mi negocio', icon: SettingsIcon },
+  { href: '/dashboard/settings', label: 'Negocio', icon: SettingsIcon },
 ];
 
 export function Sidebar() {
@@ -17,47 +17,69 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 border-r border-slate-200 bg-white flex flex-col z-40">
-      <div className="h-16 flex items-center px-6 border-b border-slate-200">
-        <Link href="/" className="text-xl font-bold text-slate-800 tracking-tight">
-          turnero<span className="text-indigo-400">.</span>
-        </Link>
-      </div>
+    <>
+      {/* ── Desktop sidebar ──────────────────────────────────────── */}
+      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 border-r border-slate-200 bg-white flex-col z-40">
+        <div className="h-16 flex items-center px-6 border-b border-slate-200">
+          <Link href="/" className="text-xl font-bold text-slate-800 tracking-tight">
+            turnero<span className="text-indigo-400">.</span>
+          </Link>
+        </div>
 
-      <nav className="flex-1 py-6 px-3 flex flex-col gap-1">
+        <nav className="flex-1 py-6 px-3 flex flex-col gap-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="px-3 pb-6">
+          <div className="px-3 py-2 mb-2">
+            <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+            <p className="text-sm text-slate-600 font-medium truncate">{user?.name}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="cursor-pointer w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <LogoutIcon className="w-4 h-4" />
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Mobile bottom nav ────────────────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex items-stretch">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
+              <item.icon className={`w-5 h-5 ${isActive ? 'stroke-[2]' : 'stroke-[1.5]'}`} />
+              <span className="text-[10px] font-medium leading-none">{item.label}</span>
             </Link>
           );
         })}
       </nav>
-
-      <div className="px-3 pb-6">
-        <div className="px-3 py-2 mb-2">
-          <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-          <p className="text-sm text-slate-600 font-medium truncate">{user?.name}</p>
-        </div>
-        <button
-          onClick={logout}
-          className="cursor-pointer w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          <LogoutIcon className="w-4 h-4" />
-          Cerrar sesión
-        </button>
-      </div>
-    </aside>
+    </>
   );
 }
 

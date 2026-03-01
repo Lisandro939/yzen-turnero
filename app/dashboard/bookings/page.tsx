@@ -63,7 +63,8 @@ export default function BookingsPage() {
           <p className="text-slate-400">No hay reservas aún.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+        <Card className="overflow-hidden min-w-[520px]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-200">
@@ -103,6 +104,7 @@ export default function BookingsPage() {
             </tbody>
           </table>
         </Card>
+        </div>
       )}
     </div>
   );

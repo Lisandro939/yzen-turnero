@@ -6,21 +6,25 @@ import type { BusinessFormValues } from "@/components/business/BusinessForm";
 import { BusinessForm } from "@/components/business/BusinessForm";
 import { Card } from "@/components/ui/Card";
 import { ConnectMercadoPago } from "@/components/mp/ConnectMercadoPago";
+import { sileo } from "sileo";
 
 export default function SettingsPage() {
     const { user, businesses, updateBusiness } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [saved, setSaved] = useState(false);
 
     const business = businesses.find((b) => b.id === user?.businessId);
 
     async function handleSubmit(values: BusinessFormValues) {
         setLoading(true);
-        await new Promise((r) => setTimeout(r, 600));
-        updateBusiness(user!.businessId!, values);
-        setLoading(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        try {
+            await sileo.promise(updateBusiness(user!.businessId!, values), {
+                loading: { title: "Guardando cambios..." },
+                success: { title: "Cambios guardados" },
+                error: { title: "Error al guardar" },
+            });
+        } finally {
+            setLoading(false);
+        }
     }
 
     if (!business)
@@ -41,24 +45,6 @@ export default function SettingsPage() {
                         Editá los parámetros de {business.name}
                     </p>
                 </div>
-                {saved && (
-                    <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-                        <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="m4.5 12.75 6 6 9-13.5"
-                            />
-                        </svg>
-                        Guardado
-                    </div>
-                )}
             </div>
 
             <Card className="p-6 sm:p-8 mb-6">
@@ -79,7 +65,7 @@ export default function SettingsPage() {
                     URL pública de tu negocio
                 </p>
                 <p className="text-indigo-500 text-sm font-mono">
-                    turnero.app/{business.slug}
+                    yzen-turnero.vercel.app/{business.slug}
                 </p>
             </Card>
         </div>
