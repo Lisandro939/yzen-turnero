@@ -1,33 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, rowToSlot, rowToBusiness } from '@/lib/db';
+import { db, rowToBusiness } from '@/lib/db';
 import { createPaymentPreference } from '@/lib/mercadopago';
 
 interface Body {
     slotId: string;
+    businessId: string;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    price: number;
+    service?: string;
 }
 
 export async function POST(request: NextRequest) {
     try {
         const body: Body = await request.json();
-        const { slotId, customerName, customerEmail, customerPhone } = body;
+        const { slotId, businessId, customerName, customerEmail, customerPhone,
+                date, startTime, endTime, price, service } = body;
 
-        // Fetch slot
-        const slotResult = await db.execute({
-            sql: 'SELECT * FROM slots WHERE id = ?',
-            args: [slotId],
-        });
-        if (slotResult.rows.length === 0) {
-            return NextResponse.json({ error: 'Slot not found' }, { status: 404 });
+        // Availability check
+        const [bookedRes, blockedRes] = await Promise.all([
+            db.execute({
+                sql: `SELECT 1 FROM bookings
+                      WHERE slot_id = ? AND status NOT IN ('cancelled', 'rejected') LIMIT 1`,
+                args: [slotId],
+            }),
+            db.execute({
+                sql: 'SELECT 1 FROM slot_blocks WHERE id = ? LIMIT 1',
+                args: [slotId],
+            }),
+        ]);
+        if (bookedRes.rows.length > 0 || blockedRes.rows.length > 0) {
+            return NextResponse.json({ error: 'Slot no longer available' }, { status: 409 });
         }
-        const slot = rowToSlot(slotResult.rows[0] as Record<string, unknown>);
 
-        // Fetch business
+        // Fetch business for MP token + slug
         const bizResult = await db.execute({
             sql: 'SELECT * FROM businesses WHERE id = ?',
-            args: [slot.businessId],
+            args: [businessId],
         });
         if (bizResult.rows.length === 0) {
             return NextResponse.json({ error: 'Business not found' }, { status: 404 });
@@ -38,22 +51,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Business has no MP account connected' }, { status: 400 });
         }
 
-        // Insert booking with status = 'pending'
+        // Insert booking with status = 'pending' + slot data
         const bookingId = `booking-${Date.now()}`;
         const createdAt = new Date().toISOString();
         await db.execute({
             sql: `INSERT INTO bookings
                     (id, slot_id, business_id, customer_name, customer_email,
-                     customer_phone, status, created_at)
-                  VALUES (?,?,?,?,?,?,?,?)`,
-            args: [bookingId, slotId, slot.businessId, customerName,
-                   customerEmail, customerPhone, 'pending', createdAt],
-        });
-
-        // Mark slot as booked
-        await db.execute({
-            sql: "UPDATE slots SET status = 'booked' WHERE id = ?",
-            args: [slotId],
+                     customer_phone, status, created_at, date, start_time, end_time, price, service)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            args: [bookingId, slotId, businessId, customerName,
+                   customerEmail, customerPhone, 'pending', createdAt,
+                   date, startTime, endTime, price, service ?? null],
         });
 
         // Create MP payment preference
@@ -63,10 +71,10 @@ export async function POST(request: NextRequest) {
                 business.mpAccessToken,
                 [
                     {
-                        id: slot.id,
-                        title: slot.service ?? 'Turno',
+                        id: slotId,
+                        title: service ?? 'Turno',
                         quantity: 1,
-                        unit_price: slot.price,
+                        unit_price: price,
                         currency_id: 'ARS',
                     },
                 ],

@@ -10,6 +10,7 @@ declare module 'next-auth' {
             image?: string | null;
             role: 'owner' | 'customer';
             businessId?: string;
+            roleChosen: boolean;
         };
     }
 }
@@ -18,5 +19,6 @@ declare module 'next-auth/jwt' {
     interface JWT {
         role: 'owner' | 'customer';
         businessId?: string;
+        roleChosen?: boolean;
     }
 }

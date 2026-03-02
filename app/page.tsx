@@ -1,14 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuth } from "@/lib/auth-context";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { fetchBusinesses } from "@/lib/api-client";
+import type { Business } from "@/types";
 
 export default function HomePage() {
-    const { businesses } = useAuth();
+    const [businesses, setBusinesses] = useState<Business[]>([]);
+
+    useEffect(() => {
+        fetchBusinesses().then(setBusinesses).catch(console.error);
+    }, []);
 
     return (
         <div className="min-h-screen">

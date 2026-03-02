@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { fetchSlots } from '@/lib/api-client';
-import type { Slot } from '@/types';
+import { fetchBusiness, fetchSlots } from '@/lib/api-client';
+import type { Business, Slot } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { BookingCalendar } from '@/components/BookingCalendar';
 import { Card } from '@/components/ui/Card';
@@ -15,11 +14,13 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function BusinessPage() {
   const { businessSlug } = useParams() as { businessSlug: string };
-  const { businesses, businessesLoading } = useAuth();
+  const [business, setBusiness] = useState<Business | null | undefined>(undefined);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
 
-  const business = businesses.find((b) => b.slug === businessSlug);
+  useEffect(() => {
+    fetchBusiness(businessSlug).then(setBusiness).catch(() => setBusiness(null));
+  }, [businessSlug]);
 
   useEffect(() => {
     if (!business) return;
@@ -28,6 +29,8 @@ export default function BusinessPage() {
       .catch(console.error)
       .finally(() => setSlotsLoading(false));
   }, [business?.id]);
+
+  const businessesLoading = business === undefined;
 
   if (businessesLoading) {
     return (
@@ -60,6 +63,18 @@ export default function BusinessPage() {
         <h1 className="text-2xl font-bold text-slate-800 mb-2">Negocio no encontrado</h1>
         <p className="text-slate-500 mb-6">No existe un negocio con ese nombre.</p>
         <Link href="/"><Button>Volver al inicio</Button></Link>
+      </div>
+    );
+  }
+
+  if (!business.mpAccessToken) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
+        <Navbar />
+        <p className="text-6xl mb-4">🔒</p>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Negocio no disponible</h1>
+        <p className="text-slate-500 mb-6">Este negocio aún no está listo para recibir reservas.</p>
+        <Link href="/"><Button>Ver otros negocios</Button></Link>
       </div>
     );
   }

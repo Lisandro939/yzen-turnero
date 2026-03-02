@@ -9,6 +9,11 @@ export type BusinessCategory =
   | 'Yoga'
   | 'Otro';
 
+// Max plan: per-day time ranges with individual prices
+export type ScheduleRange = { start: string; end: string; price: number }; // 'HH:MM'
+// Key = day of week as string ('0'=Sun … '6'=Sat)
+export type AdvancedScheduleConfig = Partial<Record<string, ScheduleRange[]>>;
+
 export interface Business {
   id: string;
   slug: string;
@@ -24,10 +29,15 @@ export interface Business {
   workingDays: number[]; // 0=Dom, 1=Lun, ..., 6=Sáb
   workingHoursStart: string; // HH:MM
   workingHoursEnd: string;   // HH:MM
+  scheduleConfig?: AdvancedScheduleConfig; // Max plan: per-day ranges
   // Mercado Pago
   mpAccessToken?: string;
   mpRefreshToken?: string;
   mpUserId?: string;
+  // Plan / subscription
+  plan?: 'pro' | 'max';
+  planExpiresAt?: string;
+  trialEndsAt?: string;
 }
 
 export interface Slot {
@@ -37,13 +47,21 @@ export interface Slot {
   startTime: string; // HH:MM
   endTime: string;   // HH:MM
   price: number;
-  status: 'open' | 'booked' | 'cancelled';
+  status: 'open' | 'booked' | 'blocked';
   service?: string;
+}
+
+export interface SlotBlock {
+  id: string;
+  businessId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface Booking {
   id: string;
-  slotId: string;
+  slotId: string | null;
   businessId: string;
   customerName: string;
   customerEmail: string;
@@ -52,6 +70,12 @@ export interface Booking {
   status: 'confirmed' | 'cancelled' | 'pending' | 'approved' | 'rejected';
   mpPreferenceId?: string;
   mpPaymentId?: string;
+  // Denormalized slot data (slot-less architecture)
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  price?: number;
+  service?: string;
 }
 
 export interface User {
@@ -60,4 +84,19 @@ export interface User {
   email: string;
   role: 'owner' | 'customer';
   businessId?: string;
+}
+
+export interface MyBooking {
+  id: string;
+  slotId: string;
+  businessId: string;
+  businessName: string;
+  businessSlug: string;
+  service?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  status: Booking['status'];
+  createdAt: string;
 }

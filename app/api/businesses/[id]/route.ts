@@ -26,10 +26,31 @@ const FIELD_MAP: Record<keyof Omit<Business, 'id' | 'slug'>, string> = {
   workingHoursEnd: 'working_hours_end',
   slotDuration: 'slot_duration',
   basePrice: 'base_price',
+  scheduleConfig: 'schedule_config',
   mpAccessToken: 'mp_access_token',
   mpRefreshToken: 'mp_refresh_token',
   mpUserId: 'mp_user_id',
+  plan: 'plan',
+  planExpiresAt: 'plan_expires_at',
+  trialEndsAt: 'trial_ends_at',
 };
+
+export async function GET(_request: NextRequest, { params }: Context) {
+  try {
+    const { id } = await params;
+    const result = await db.execute({
+      sql: 'SELECT * FROM businesses WHERE id = ? OR slug = ? LIMIT 1',
+      args: [id, id],
+    });
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    return NextResponse.json({ business: rowToBusiness(result.rows[0] as Record<string, unknown>) });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: 'Failed to fetch business' }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: NextRequest, { params }: Context) {
   try {
@@ -43,7 +64,8 @@ export async function PATCH(request: NextRequest, { params }: Context) {
       if (jsKey in body) {
         sets.push(`${dbCol} = ?`);
         const val = body[jsKey as keyof typeof body];
-        args.push(jsKey === 'workingDays' ? JSON.stringify(val) : (val ?? null) as string | number | null);
+        const needsJson = jsKey === 'workingDays' || jsKey === 'scheduleConfig';
+        args.push(needsJson ? JSON.stringify(val) : (val ?? null) as string | number | null);
       }
     }
 
@@ -59,14 +81,6 @@ export async function PATCH(request: NextRequest, { params }: Context) {
 
     args.push(id);
     await db.execute({ sql: `UPDATE businesses SET ${sets.join(', ')} WHERE id = ?`, args });
-
-    // If basePrice changed, sync open slots to the new price
-    if ('basePrice' in body && body.basePrice !== undefined) {
-      await db.execute({
-        sql: "UPDATE slots SET price = ? WHERE business_id = ? AND status = 'open'",
-        args: [body.basePrice, id],
-      });
-    }
 
     const result = await db.execute({ sql: 'SELECT * FROM businesses WHERE id = ?', args: [id] });
     if (result.rows.length === 0) {

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, rowToBusiness } from '@/lib/db';
-import { generateSlotsForBusiness, slotId } from '@/lib/slot-generator';
 import type { Business } from '@/types';
 
 export async function GET() {
   try {
-    const result = await db.execute('SELECT * FROM businesses ORDER BY name');
+    // Only show businesses that have MP connected AND are active (trial or paid plan)
+    const result = await db.execute(`
+      SELECT * FROM businesses
+      WHERE
+        mp_access_token IS NOT NULL AND mp_access_token != ''
+        AND (trial_ends_at > datetime('now') OR plan_expires_at > datetime('now'))
+      ORDER BY name
+    `);
     const businesses = result.rows.map((r) => rowToBusiness(r as Record<string, unknown>));
     return NextResponse.json({ businesses });
   } catch (err) {
@@ -22,8 +28,8 @@ export async function POST(request: NextRequest) {
       sql: `INSERT OR IGNORE INTO businesses
               (id, slug, name, description, owner_name, owner_email, category,
                image_url, working_days, working_hours_start, working_hours_end,
-               slot_duration, base_price)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+               slot_duration, base_price, trial_ends_at, plan)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now', '+7 days'),'pro')`,
       args: [
         business.id, business.slug, business.name, business.description,
         business.ownerName, business.ownerEmail, business.category,
@@ -38,20 +44,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ya existe un negocio con ese nombre' }, { status: 409 });
     }
 
-    // Generate slots for the next 7 days
-    const slots = generateSlotsForBusiness(business);
-    for (const slot of slots) {
-      const id = slotId(slot.businessId, slot.date, slot.startTime);
-      await db.execute({
-        sql: `INSERT OR IGNORE INTO slots
-                (id, business_id, date, start_time, end_time, price, status, service)
-              VALUES (?,?,?,?,?,?,?,?)`,
-        args: [id, slot.businessId, slot.date, slot.startTime, slot.endTime,
-               slot.price, slot.status, slot.service ?? null],
-      });
-    }
+    const created = await db.execute({
+      sql: 'SELECT * FROM businesses WHERE id = ?',
+      args: [business.id],
+    });
 
-    return NextResponse.json({ business }, { status: 201 });
+    return NextResponse.json({ business: rowToBusiness(created.rows[0] as Record<string, unknown>) }, { status: 201 });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Failed to create business' }, { status: 500 });

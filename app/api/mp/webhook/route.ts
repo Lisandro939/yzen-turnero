@@ -37,6 +37,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: true });
         }
 
+        // Handle plan subscription payment via external_reference
+        const externalRef = String(paymentData.external_reference ?? '');
+        if (externalRef.startsWith('plan:') && mpStatus === 'approved') {
+            const [, businessId, planType] = externalRef.split(':');
+            const bizRes = await db.execute({
+                sql: 'SELECT plan_expires_at FROM businesses WHERE id = ?',
+                args: [businessId],
+            });
+            const currentExpiry = bizRes.rows[0]?.plan_expires_at;
+            const now = new Date();
+            const base = (currentExpiry && new Date(String(currentExpiry)) > now)
+                ? new Date(String(currentExpiry))
+                : new Date(now);
+            base.setDate(base.getDate() + 30);
+            await db.execute({
+                sql: 'UPDATE businesses SET plan = ?, plan_expires_at = ? WHERE id = ?',
+                args: [planType, base.toISOString(), businessId],
+            });
+            return NextResponse.json({ ok: true });
+        }
+
         // Map MP status to booking status
         let bookingStatus: string;
         if (mpStatus === 'approved') {

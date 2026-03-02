@@ -34,14 +34,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     callbacks: {
         async jwt({ token, trigger }) {
-            // Query DB on first sign-in, manual update(), or when role is absent
-            if (token.email && (trigger === 'signIn' || trigger === 'update' || !token.role)) {
-                const result = await db.execute({
-                    sql: 'SELECT id FROM businesses WHERE owner_email = ? LIMIT 1',
-                    args: [token.email],
-                });
-                token.role = result.rows.length > 0 ? 'owner' : 'customer';
-                token.businessId = result.rows[0] ? String(result.rows[0].id) : undefined;
+            // Query DB on first sign-in, manual update(), or when role/roleChosen is absent
+            if (
+                token.email &&
+                (trigger === 'signIn' ||
+                    trigger === 'update' ||
+                    !token.role ||
+                    token.roleChosen === undefined)
+            ) {
+                try {
+                    // Ensure user record exists on every sign-in (idempotent)
+                    if (trigger === 'signIn') {
+                        await db.execute({
+                            sql: 'INSERT OR IGNORE INTO users (email) VALUES (?)',
+                            args: [token.email],
+                        });
+                    }
+                    // Determine role from businesses table
+                    const bizResult = await db.execute({
+                        sql: 'SELECT id FROM businesses WHERE owner_email = ? LIMIT 1',
+                        args: [token.email],
+                    });
+                    token.role = bizResult.rows.length > 0 ? 'owner' : 'customer';
+                    token.businessId = bizResult.rows[0]
+                        ? String(bizResult.rows[0].id)
+                        : undefined;
+                    // Owners are always considered as having chosen their role
+                    if (token.role === 'owner') {
+                        token.roleChosen = true;
+                    } else {
+                        const userResult = await db.execute({
+                            sql: 'SELECT role_chosen FROM users WHERE email = ?',
+                            args: [token.email],
+                        });
+                        token.roleChosen = userResult.rows[0]
+                            ? Number(userResult.rows[0].role_chosen) === 1
+                            : false;
+                    }
+                } catch (err) {
+                    console.error('[auth] JWT callback DB error:', err);
+                    // Fallback: keep existing values or safe defaults
+                    if (!token.role) token.role = 'customer';
+                    if (token.roleChosen === undefined) token.roleChosen = false;
+                }
             }
             return token;
         },
@@ -49,6 +84,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             session.user.id = token.sub!;
             session.user.role = (token.role as 'owner' | 'customer') ?? 'customer';
             session.user.businessId = token.businessId as string | undefined;
+            session.user.roleChosen = (token.roleChosen as boolean) ?? false;
             return session;
         },
     },

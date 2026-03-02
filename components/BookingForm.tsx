@@ -7,7 +7,7 @@ import { createBooking } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { sileo } from 'sileo';
+import { toast } from '@/lib/toast';
 
 interface BookingFormProps {
     slot: Slot;
@@ -45,9 +45,15 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         slotId: slot.id,
+                        businessId: slot.businessId,
                         customerName: form.name,
                         customerEmail: form.email,
                         customerPhone: form.phone,
+                        date: slot.date,
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        price: slot.price,
+                        service: slot.service,
                     }),
                 });
                 if (!res.ok) throw new Error('Failed to create preference');
@@ -56,7 +62,7 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
                 window.location.href = data.initPoint;
             } catch (err) {
                 console.error(err);
-                sileo.error({ title: 'Error al procesar el pago', description: 'Intentá de nuevo.' });
+                toast.error({ title: 'Error al procesar el pago', description: 'Intentá de nuevo.' });
                 setLoading(false);
             }
         } else {
@@ -64,7 +70,7 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
             await new Promise((res) => setTimeout(res, 1500));
 
             try {
-                await sileo.promise(
+                await toast.promise(
                     createBooking({
                         slotId: slot.id,
                         businessId: slot.businessId,
@@ -72,6 +78,11 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
                         customerEmail: form.email,
                         customerPhone: form.phone,
                         status: 'confirmed',
+                        date: slot.date,
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        price: slot.price,
+                        service: slot.service,
                     }),
                     {
                         loading: { title: 'Confirmando turno...' },

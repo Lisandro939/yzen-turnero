@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "@/lib/auth-context";
 import {
     fetchSlots,
     fetchBookings,
-    createSlot,
-    updateSlotStatus,
+    blockSlot,
+    unblockSlot,
 } from "@/lib/api-client";
 import type { Slot, Booking } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { sileo } from "sileo";
+import { toast } from "@/lib/toast";
 
 // ── Calendar config ────────────────────────────────────────────────────────
 const HOUR_START = 8;
@@ -60,6 +59,7 @@ function slotColors(status: Slot["status"]) {
         return "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100";
     if (status === "booked")
         return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100";
+    // blocked
     return "bg-slate-50 border-slate-200 text-slate-400";
 }
 
@@ -70,25 +70,16 @@ export default function AgendaPage() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [weekBase, setWeekBase] = useState(() => new Date());
-    const [showForm, setShowForm] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [blockingId, setBlockingId] = useState<string | null>(null);
+    const [unblockingId, setUnblockingId] = useState<string | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-    const [form, setForm] = useState({
-        date: "",
-        startTime: "",
-        endTime: "",
-        service: "",
-        price: "",
-    });
-
     const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
     const today = toYMD(new Date());
 
     useEffect(() => {
         if (!user?.businessId) return;
         Promise.all([
-            fetchSlots(user.businessId),
+            fetchSlots(user.businessId, {}),
             fetchBookings(user.businessId),
         ])
             .then(([s, b]) => {
@@ -101,7 +92,7 @@ export default function AgendaPage() {
 
     const bookingBySlotId = useMemo(() => {
         const map: Record<string, Booking> = {};
-        for (const b of bookings) map[b.slotId] = b;
+        for (const b of bookings) if (b.slotId) map[b.slotId] = b;
         return map;
     }, [bookings]);
 
@@ -113,61 +104,45 @@ export default function AgendaPage() {
         return `${startStr} – ${endStr}`;
     })();
 
-    async function addSlot() {
-        if (!form.date || !form.startTime || !form.endTime || !user?.businessId)
-            return;
-        setSaving(true);
+    async function doBlockSlot(slot: Slot) {
+        setBlockingId(slot.id);
         try {
-            const newSlot = await sileo.promise(
-                createSlot({
-                    businessId: user.businessId,
-                    date: form.date,
-                    startTime: form.startTime,
-                    endTime: form.endTime,
-                    price: Number(form.price) || 0,
-                    status: "open",
-                    service: form.service || undefined,
-                }),
-                {
-                    loading: { title: "Guardando turno..." },
-                    success: { title: "Turno creado" },
-                    error: { title: "Error al crear turno" },
-                },
-            );
-            setSlots((prev) => [...prev, newSlot]);
-            setForm({
-                date: "",
-                startTime: "",
-                endTime: "",
-                service: "",
-                price: "",
-            });
-            setShowForm(false);
-        } catch {
-            // sileo already shows the error
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function cancelSlot(slotId: string) {
-        setCancellingId(slotId);
-        try {
-            await sileo.promise(updateSlotStatus(slotId, "cancelled"), {
-                loading: { title: "Cancelando turno..." },
-                success: { title: "Turno cancelado" },
-                error: { title: "Error al cancelar" },
+            await toast.promise(blockSlot(slot.id, slot.endTime), {
+                loading: { title: "Bloqueando turno..." },
+                success: { title: "Turno bloqueado" },
+                error: { title: "Error al bloquear" },
             });
             setSlots((prev) =>
                 prev.map((s) =>
-                    s.id === slotId ? { ...s, status: "cancelled" } : s,
+                    s.id === slot.id ? { ...s, status: "blocked" } : s,
                 ),
             );
             setSelectedSlot(null);
         } catch {
-            // sileo already shows the error
+            // toast already shows the error
         } finally {
-            setCancellingId(null);
+            setBlockingId(null);
+        }
+    }
+
+    async function doUnblockSlot(slot: Slot) {
+        setUnblockingId(slot.id);
+        try {
+            await toast.promise(unblockSlot(slot.id), {
+                loading: { title: "Desbloqueando turno..." },
+                success: { title: "Turno desbloqueado" },
+                error: { title: "Error al desbloquear" },
+            });
+            setSlots((prev) =>
+                prev.map((s) =>
+                    s.id === slot.id ? { ...s, status: "open" } : s,
+                ),
+            );
+            setSelectedSlot(null);
+        } catch {
+            // toast already shows the error
+        } finally {
+            setUnblockingId(null);
         }
     }
 
@@ -187,72 +162,7 @@ export default function AgendaPage() {
                         Gestioná tus turnos disponibles
                     </p>
                 </div>
-                {/* <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancelar' : '+ Agregar turno'}
-        </Button> */}
             </div>
-
-            {/* Add slot form */}
-            {showForm && (
-                <Card className="p-6 mb-6">
-                    <h3 className="text-slate-700 font-semibold mb-4">
-                        Nuevo turno
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Input
-                            label="Fecha"
-                            type="date"
-                            value={form.date}
-                            onChange={(e) =>
-                                setForm({ ...form, date: e.target.value })
-                            }
-                        />
-                        <Input
-                            label="Servicio"
-                            placeholder="Ej: Corte de cabello"
-                            value={form.service}
-                            onChange={(e) =>
-                                setForm({ ...form, service: e.target.value })
-                            }
-                        />
-                        <Input
-                            label="Hora inicio"
-                            type="time"
-                            value={form.startTime}
-                            onChange={(e) =>
-                                setForm({ ...form, startTime: e.target.value })
-                            }
-                        />
-                        <Input
-                            label="Hora fin"
-                            type="time"
-                            value={form.endTime}
-                            onChange={(e) =>
-                                setForm({ ...form, endTime: e.target.value })
-                            }
-                        />
-                        <Input
-                            label="Precio ($)"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="1500"
-                            value={form.price}
-                            onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    price: e.target.value.replace(
-                                        /[^0-9]/g,
-                                        "",
-                                    ),
-                                })
-                            }
-                        />
-                    </div>
-                    <Button className="mt-4" loading={saving} onClick={addSlot}>
-                        Guardar turno
-                    </Button>
-                </Card>
-            )}
 
             {/* Week navigation */}
             <div className="flex items-center gap-3 mb-3">
@@ -473,7 +383,7 @@ export default function AgendaPage() {
             <div className="flex items-center gap-6 mt-3">
                 <LegendItem color="bg-indigo-200" label="Disponible" />
                 <LegendItem color="bg-emerald-200" label="Reservado" />
-                <LegendItem color="bg-slate-200" label="Cancelado" />
+                <LegendItem color="bg-slate-200" label="Bloqueado" />
             </div>
 
             {/* Slot detail modal */}
@@ -578,10 +488,22 @@ export default function AgendaPage() {
                                 <Button
                                     variant="danger"
                                     size="sm"
-                                    loading={cancellingId === selectedSlot.id}
-                                    onClick={() => cancelSlot(selectedSlot.id)}
+                                    loading={blockingId === selectedSlot.id}
+                                    onClick={() => doBlockSlot(selectedSlot)}
                                 >
-                                    Cancelar turno
+                                    Bloquear turno
+                                </Button>
+                            </div>
+                        )}
+                        {selectedSlot.status === "blocked" && (
+                            <div className="mt-5">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    loading={unblockingId === selectedSlot.id}
+                                    onClick={() => doUnblockSlot(selectedSlot)}
+                                >
+                                    Desbloquear turno
                                 </Button>
                             </div>
                         )}

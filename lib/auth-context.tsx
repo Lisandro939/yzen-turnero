@@ -11,6 +11,7 @@ interface AuthUser {
     email: string;
     role: 'owner' | 'customer';
     businessId?: string;
+    roleChosen: boolean;
 }
 
 interface AuthContextValue {
@@ -19,6 +20,7 @@ interface AuthContextValue {
     businessesLoading: boolean;
     logout: () => void;
     upgradeToOwner: (business: Business) => Promise<void>;
+    markRoleChosen: () => Promise<void>;
     updateBusiness: (businessId: string, data: Partial<Business>) => Promise<void>;
 }
 
@@ -36,12 +38,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               email: session.user.email ?? '',
               role: session.user.role,
               businessId: session.user.businessId,
+              roleChosen: session.user.roleChosen ?? false,
           }
         : null;
 
     useEffect(() => {
-        api.fetchBusinesses()
-            .then(setBusinesses)
+        api.fetchMyBusiness()
+            .then((biz) => setBusinesses(biz ? [biz] : []))
             .catch(console.error)
             .finally(() => setBusinessesLoading(false));
     }, []);
@@ -52,8 +55,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     async function upgradeToOwner(business: Business) {
         const created = await api.createBusiness(business);
-        setBusinesses((prev) => [...prev, created]);
+        setBusinesses([created]);
         // Re-run jwt() callback so session reflects new role: 'owner'
+        await updateSession({ trigger: 'update' });
+    }
+
+    async function markRoleChosen() {
+        await api.markRoleChosen();
         await updateSession({ trigger: 'update' });
     }
 
@@ -66,7 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider
-            value={{ user, businesses, businessesLoading, logout, upgradeToOwner, updateBusiness }}
+            value={{ user, businesses, businessesLoading, logout, upgradeToOwner, markRoleChosen, updateBusiness }}
         >
             {children}
         </AuthContext.Provider>

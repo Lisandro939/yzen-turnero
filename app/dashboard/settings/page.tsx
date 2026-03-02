@@ -2,22 +2,24 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { getPlanStatus } from "@/lib/plan-utils";
 import type { BusinessFormValues } from "@/components/business/BusinessForm";
 import { BusinessForm } from "@/components/business/BusinessForm";
 import { Card } from "@/components/ui/Card";
 import { ConnectMercadoPago } from "@/components/mp/ConnectMercadoPago";
-import { sileo } from "sileo";
+import { toast } from "@/lib/toast";
 
 export default function SettingsPage() {
     const { user, businesses, updateBusiness } = useAuth();
     const [loading, setLoading] = useState(false);
 
     const business = businesses.find((b) => b.id === user?.businessId);
+    const planStatus = business ? getPlanStatus(business) : null;
 
     async function handleSubmit(values: BusinessFormValues) {
         setLoading(true);
         try {
-            await sileo.promise(updateBusiness(user!.businessId!, values), {
+            await toast.promise(updateBusiness(user!.businessId!, values), {
                 loading: { title: "Guardando cambios..." },
                 success: { title: "Cambios guardados" },
                 error: { title: "Error al guardar" },
@@ -54,6 +56,7 @@ export default function SettingsPage() {
                     onSubmit={handleSubmit}
                     loading={loading}
                     submitLabel="Guardar cambios"
+                    planStatus={planStatus}
                 />
             </Card>
 
@@ -68,6 +71,7 @@ export default function SettingsPage() {
                     yzen-turnero.vercel.app/{business.slug}
                 </p>
             </Card>
+
         </div>
     );
 }

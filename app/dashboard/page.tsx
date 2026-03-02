@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { fetchSlots, fetchBookings } from "@/lib/api-client";
+import { getPlanStatus } from "@/lib/plan-utils";
 import type { Slot, Booking } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -20,10 +22,11 @@ export default function DashboardPage() {
 
     const bizId = user?.businessId;
     const business = businesses.find((b) => b.id === bizId);
+    const planStatus = business ? getPlanStatus(business) : null;
 
     useEffect(() => {
         if (!bizId) return;
-        Promise.all([fetchSlots(bizId, today()), fetchBookings(bizId)])
+        Promise.all([fetchSlots(bizId, { date: today() }), fetchBookings(bizId)])
             .then(([s, b]) => {
                 setSlots(s);
                 setBookings(b);
@@ -152,6 +155,15 @@ export default function DashboardPage() {
                         Tenés <strong>{openCount}</strong> turno
                         {openCount !== 1 ? "s" : ""} disponible
                         {openCount !== 1 ? "s" : ""} hoy sin reservar.
+                    </p>
+                </Card>
+            )}
+
+            {planStatus?.expiring && (
+                <Card className="mt-6 p-4 border-amber-200 bg-amber-50">
+                    <p className="text-amber-700 text-sm font-medium">
+                        Tu plan vence en <strong>{planStatus.daysLeft} día{planStatus.daysLeft !== 1 ? 's' : ''}</strong>.{' '}
+                        <Link href="/plan" className="underline">Renovar ahora</Link>
                     </p>
                 </Card>
             )}

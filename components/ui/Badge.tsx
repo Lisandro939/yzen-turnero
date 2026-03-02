@@ -1,5 +1,5 @@
 interface BadgeProps {
-  status: 'open' | 'booked' | 'cancelled' | 'confirmed' | 'pending' | 'approved' | 'rejected';
+  status: 'open' | 'booked' | 'blocked' | 'cancelled' | 'confirmed' | 'pending' | 'approved' | 'rejected';
   className?: string;
 }
 
@@ -7,6 +7,7 @@ export function Badge({ status, className = '' }: BadgeProps) {
   const styles: Record<string, string> = {
     open: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
     booked: 'bg-amber-100 text-amber-700 border border-amber-200',
+    blocked: 'bg-slate-100 text-slate-500 border border-slate-200',
     cancelled: 'bg-rose-100 text-rose-600 border border-rose-200',
     confirmed: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
     pending: 'bg-amber-100 text-amber-700 border border-amber-200',
@@ -17,6 +18,7 @@ export function Badge({ status, className = '' }: BadgeProps) {
   const labels: Record<string, string> = {
     open: 'Disponible',
     booked: 'Reservado',
+    blocked: 'Bloqueado',
     cancelled: 'Cancelado',
     confirmed: 'Confirmado',
     pending: 'Pendiente',

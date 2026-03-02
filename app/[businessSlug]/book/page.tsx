@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { fetchSlot } from '@/lib/api-client';
-import type { Slot } from '@/types';
+import { fetchBusiness, fetchSlot } from '@/lib/api-client';
+import type { Business, Slot } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { BookingForm } from '@/components/BookingForm';
 import { Button } from '@/components/ui/Button';
@@ -15,22 +14,27 @@ export default function BookPage() {
   const { businessSlug } = useParams() as { businessSlug: string };
   const searchParams = useSearchParams();
   const slotId = searchParams.get('slotId') ?? '';
-  const { businesses } = useAuth();
+  const [business, setBusiness] = useState<Business | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
-  const [slotLoading, setSlotLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  const business = businesses.find((b) => b.slug === businessSlug);
 
   useEffect(() => {
     if (!slotId) return;
-    fetchSlot(slotId)
-      .then(setSlot)
+    Promise.all([
+      fetchBusiness(businessSlug),
+      fetchSlot(slotId).catch(() => null),
+    ])
+      .then(([biz, s]) => {
+        setBusiness(biz);
+        if (!s) setNotFound(true);
+        else setSlot(s);
+      })
       .catch(() => setNotFound(true))
-      .finally(() => setSlotLoading(false));
-  }, [slotId]);
+      .finally(() => setLoading(false));
+  }, [slotId, businessSlug]);
 
-  if (!slotLoading && (notFound || !slot)) {
+  if (!loading && (notFound || !slot)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
         <Navbar />
@@ -42,7 +46,7 @@ export default function BookPage() {
     );
   }
 
-  if (!business || !slot) {
+  if (loading || !business || !slot) {
     return (
       <div className="min-h-screen">
         <Navbar />

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { fetchBookings, fetchSlots } from '@/lib/api-client';
-import type { Booking, Slot } from '@/types';
+import { fetchBookings } from '@/lib/api-client';
+import type { Booking } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -11,16 +11,12 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function BookingsPage() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.businessId) return;
-    Promise.all([
-      fetchBookings(user.businessId),
-      fetchSlots(user.businessId),
-    ])
-      .then(([b, s]) => { setBookings(b); setSlots(s); })
+    fetchBookings(user.businessId)
+      .then(setBookings)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user?.businessId]);
@@ -75,9 +71,7 @@ export default function BookingsPage() {
               </tr>
             </thead>
             <tbody>
-              {bookings.map((booking, i) => {
-                const slot = slots.find((s) => s.id === booking.slotId);
-                return (
+              {bookings.map((booking, i) => (
                   <tr key={booking.id} className={`border-b border-slate-100 ${i % 2 === 0 ? '' : 'bg-slate-50/50'}`}>
                     <td className="px-5 py-4">
                       <p className="text-slate-800 font-medium">{booking.customerName}</p>
@@ -88,10 +82,10 @@ export default function BookingsPage() {
                       <p className="text-slate-400 text-xs">{booking.customerPhone}</p>
                     </td>
                     <td className="px-5 py-4">
-                      {slot ? (
+                      {booking.date ? (
                         <>
-                          <p className="text-slate-600 text-sm">{slot.date}</p>
-                          <p className="text-slate-400 text-xs">{slot.startTime} – {slot.endTime}</p>
+                          <p className="text-slate-600 text-sm">{booking.date}</p>
+                          <p className="text-slate-400 text-xs">{booking.startTime} – {booking.endTime}</p>
                         </>
                       ) : (
                         <span className="text-slate-400 text-sm">—</span>
@@ -99,8 +93,7 @@ export default function BookingsPage() {
                     </td>
                     <td className="px-5 py-4"><Badge status={booking.status} /></td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </Card>

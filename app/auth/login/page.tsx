@@ -9,7 +9,7 @@ export default function LoginPage() {
 
     async function handleGoogleLogin() {
         setLoading(true);
-        await signIn('google', { callbackUrl: '/' });
+        await signIn('google', { callbackUrl: '/auth/callback' });
     }
 
     return (
@@ -19,8 +19,10 @@ export default function LoginPage() {
                     turnero<span className="text-indigo-400">.</span>
                 </Link>
 
-                <h1 className="mt-6 text-xl font-semibold text-slate-800">Iniciá sesión</h1>
-                <p className="text-slate-400 text-sm mt-1 mb-10">Accedé a tu cuenta para gestionar tus turnos</p>
+                <h1 className="mt-6 text-xl font-semibold text-slate-800">Iniciá sesión / Registrate</h1>
+                <p className="text-slate-400 text-sm mt-1 mb-10">
+                    Si ya tenés cuenta accedés directamente. Si es tu primera vez, la creamos en segundos.
+                </p>
 
                 <button
                     onClick={handleGoogleLogin}

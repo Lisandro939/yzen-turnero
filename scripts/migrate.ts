@@ -10,6 +10,12 @@ async function migrate() {
   console.log('Running migrations...');
 
   await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS users (
+      email       TEXT PRIMARY KEY,
+      role_chosen INTEGER NOT NULL DEFAULT 0,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS businesses (
       id                  TEXT PRIMARY KEY,
       slug                TEXT UNIQUE NOT NULL,
@@ -40,7 +46,7 @@ async function migrate() {
 
     CREATE TABLE IF NOT EXISTS bookings (
       id             TEXT PRIMARY KEY,
-      slot_id        TEXT NOT NULL REFERENCES slots(id),
+      slot_id        TEXT,
       business_id    TEXT NOT NULL REFERENCES businesses(id),
       customer_name  TEXT NOT NULL,
       customer_email TEXT NOT NULL,
@@ -52,13 +58,24 @@ async function migrate() {
 
   console.log('✓ Tables created successfully');
 
-  // Add MP columns (idempotent — silently skip if already exists)
+  // Add all optional columns (idempotent — silently skip if already exists)
   const alterStatements = [
     `ALTER TABLE businesses ADD COLUMN mp_access_token TEXT`,
     `ALTER TABLE businesses ADD COLUMN mp_refresh_token TEXT`,
     `ALTER TABLE businesses ADD COLUMN mp_user_id TEXT`,
     `ALTER TABLE bookings ADD COLUMN mp_preference_id TEXT`,
     `ALTER TABLE bookings ADD COLUMN mp_payment_id TEXT`,
+    `ALTER TABLE businesses ADD COLUMN plan TEXT DEFAULT 'pro'`,
+    `ALTER TABLE businesses ADD COLUMN plan_expires_at TEXT`,
+    `ALTER TABLE businesses ADD COLUMN trial_ends_at TEXT`,
+    // Slot-less architecture: denormalize slot data into bookings
+    `ALTER TABLE bookings ADD COLUMN date TEXT`,
+    `ALTER TABLE bookings ADD COLUMN start_time TEXT`,
+    `ALTER TABLE bookings ADD COLUMN end_time TEXT`,
+    `ALTER TABLE bookings ADD COLUMN price REAL`,
+    `ALTER TABLE bookings ADD COLUMN service TEXT`,
+    // Advanced schedule config for Max plan
+    `ALTER TABLE businesses ADD COLUMN schedule_config TEXT`,
   ];
   for (const sql of alterStatements) {
     try {
@@ -68,7 +85,57 @@ async function migrate() {
       throw err;
     }
   }
-  console.log('✓ MP columns added (or already existed)');
+  console.log('✓ All columns added (or already existed)');
+
+  // Backfill bookings date/time/price/service from slots (only if slots table still exists)
+  try {
+    await db.execute(`
+      UPDATE bookings SET
+        date       = (SELECT date       FROM slots WHERE slots.id = bookings.slot_id),
+        start_time = (SELECT start_time FROM slots WHERE slots.id = bookings.slot_id),
+        end_time   = (SELECT end_time   FROM slots WHERE slots.id = bookings.slot_id),
+        price      = (SELECT price      FROM slots WHERE slots.id = bookings.slot_id),
+        service    = (SELECT service    FROM slots WHERE slots.id = bookings.slot_id)
+      WHERE slot_id IS NOT NULL AND date IS NULL
+    `);
+    console.log('✓ Bookings backfilled from slots');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('no such table')) {
+      console.log('✓ Bookings backfill skipped (slots already dropped)');
+    } else {
+      throw err;
+    }
+  }
+
+  // Create slot_blocks table
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS slot_blocks (
+      id          TEXT PRIMARY KEY,
+      business_id TEXT NOT NULL,
+      date        TEXT NOT NULL,
+      start_time  TEXT NOT NULL,
+      end_time    TEXT NOT NULL,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  console.log('✓ slot_blocks table created (or already existed)');
+
+  // Give trial period to any existing business that has none
+  await db.execute(`
+    UPDATE businesses
+    SET trial_ends_at = datetime('now', '+30 days')
+    WHERE trial_ends_at IS NULL AND plan_expires_at IS NULL
+  `);
+  console.log('✓ Trial set for existing businesses without a plan');
+
+  // Drop legacy slots table (disable FK enforcement to allow drop)
+  await db.executeMultiple(`
+    PRAGMA foreign_keys = OFF;
+    DROP TABLE IF EXISTS slots;
+    PRAGMA foreign_keys = ON;
+  `);
+  console.log('✓ Legacy slots table dropped');
+
   process.exit(0);
 }
 

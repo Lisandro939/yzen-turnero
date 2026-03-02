@@ -50,6 +50,7 @@ export async function createPaymentPreference(
     items: { id: string; title: string; quantity: number; unit_price: number; currency_id?: string }[],
     backUrls: { success: string; failure: string; pending: string },
     notificationUrl: string,
+    externalReference?: string,
 ): Promise<{ id: string; initPoint: string; sandboxInitPoint: string }> {
     const client = getMPClient(accessToken);
     const preference = new Preference(client);
@@ -58,6 +59,7 @@ export async function createPaymentPreference(
             items,
             back_urls: backUrls,
             notification_url: notificationUrl,
+            ...(externalReference ? { external_reference: externalReference } : {}),
         },
     });
     return {
