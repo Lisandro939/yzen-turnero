@@ -98,6 +98,26 @@ export function Sidebar() {
         </div>
       </aside>
 
+      {/* ── Mobile top header ────────────────────────────────────── */}
+      <header className="lg:hidden fixed top-0 inset-x-0 z-40 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4">
+        <Link href="/" className="text-lg font-bold text-slate-800 tracking-tight">
+          turnero<span className="text-indigo-400">.</span>
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="text-right leading-none">
+            <p className="text-xs font-medium text-slate-700 truncate max-w-[120px]">{user?.name}</p>
+            <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{user?.email}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="cursor-pointer flex items-center justify-center w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Cerrar sesión"
+          >
+            <LogoutIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
       {/* ── Mobile bottom nav ────────────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex items-stretch">
         {navItems.map((item) => {

@@ -137,15 +137,15 @@ export function BusinessForm({ mode, initialValues, onSubmit, loading, submitLab
 
       {/* ── Sección 2: Turnos y horario ── */}
       <div>
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <h3 className="text-slate-700 font-semibold flex items-center gap-2 shrink-0">
-            <span className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-500 text-xs flex items-center justify-center font-bold">2</span>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+          <h3 className="text-slate-700 font-semibold flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-500 text-xs flex items-center justify-center font-bold shrink-0">2</span>
             Turnos y horario de atención
           </h3>
           {planStatus !== undefined && (
             <Link
               href={planStatus?.plan === 'max' && planStatus.active ? '/dashboard/settings/advanced' : '/plan?upgrade=max'}
-              className="shrink-0 flex items-center gap-2.5 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors group"
+              className="self-start flex items-center gap-2.5 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors group"
             >
               <div className="text-right">
                 <p className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 leading-none mb-0.5">Configuración avanzada</p>
