@@ -5,6 +5,10 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Business } from '@/types';
 
+interface Props {
+    business: Business;
+}
+
 export function ConnectMercadoPago({ business }: Props) {
     const searchParams = useSearchParams();
     const mpStatus = searchParams.get('mp');
