@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
 
 interface BookingBody {
   slotId: string;
+  serviceId?: string;
   businessId: string;
   customerName: string;
   customerEmail: string;
@@ -46,8 +47,7 @@ export async function POST(request: NextRequest) {
     // Availability check: is the slot already booked or blocked?
     const [bookedRes, blockedRes] = await Promise.all([
       db.execute({
-        sql: `SELECT 1 FROM bookings
-              WHERE slot_id = ? AND status NOT IN ('cancelled', 'rejected') LIMIT 1`,
+        sql: `SELECT 1 FROM bookings WHERE slot_id = ? AND status NOT IN ('cancelled','rejected') LIMIT 1`,
         args: [body.slotId],
       }),
       db.execute({
@@ -65,13 +65,24 @@ export async function POST(request: NextRequest) {
 
     await db.execute({
       sql: `INSERT INTO bookings
-              (id, slot_id, business_id, customer_name, customer_email,
+              (id, slot_id, service_id, business_id, customer_name, customer_email,
                customer_phone, status, created_at, date, start_time, end_time, price, service)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       args: [
-        id, body.slotId, body.businessId, body.customerName,
-        body.customerEmail, body.customerPhone ?? '', body.status ?? 'confirmed', createdAt,
-        body.date, body.startTime, body.endTime, body.price, body.service ?? null,
+        id,
+        body.slotId,
+        body.serviceId ?? null,
+        body.businessId,
+        body.customerName,
+        body.customerEmail,
+        body.customerPhone ?? '',
+        body.status ?? 'confirmed',
+        createdAt,
+        body.date,
+        body.startTime,
+        body.endTime,
+        body.price,
+        body.service ?? null,
       ],
     });
 

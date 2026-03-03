@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client';
-import type { Business, Slot, SlotBlock, Booking, BusinessCategory } from '@/types';
+import type { Business, Service, SlotBlock, Booking, BusinessCategory } from '@/types';
 
 export const db = createClient({
   url: process.env.TURSO_DATABASE_URL!,
@@ -33,10 +33,28 @@ export function rowToBusiness(row: DbRow): Business {
   };
 }
 
+export function rowToService(row: DbRow): Service {
+  return {
+    id: String(row.id),
+    businessId: String(row.business_id),
+    name: String(row.name),
+    description: String(row.description ?? ''),
+    slotDuration: Number(row.slot_duration) as 30 | 45 | 60,
+    basePrice: Number(row.base_price),
+    workingDays: JSON.parse(String(row.working_days ?? '[]')),
+    workingHoursStart: String(row.working_hours_start),
+    workingHoursEnd: String(row.working_hours_end),
+    scheduleConfig: row.schedule_config != null ? JSON.parse(String(row.schedule_config)) : undefined,
+    isActive: Number(row.is_active) !== 0,
+    createdAt: String(row.created_at),
+  };
+}
+
 export function rowToSlotBlock(row: DbRow): SlotBlock {
   return {
     id: String(row.id),
     businessId: String(row.business_id),
+    serviceId: row.service_id != null ? String(row.service_id) : String(row.business_id),
     date: String(row.date),
     startTime: String(row.start_time),
     endTime: String(row.end_time),
@@ -60,5 +78,6 @@ export function rowToBooking(row: DbRow): Booking {
     endTime: row.end_time != null ? String(row.end_time) : undefined,
     price: row.price != null ? Number(row.price) : undefined,
     service: row.service != null ? String(row.service) : undefined,
+    serviceId: row.service_id != null ? String(row.service_id) : undefined,
   };
 }

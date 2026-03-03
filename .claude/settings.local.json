@@ -14,7 +14,8 @@
       "Bash(pnpm add next-auth@beta mercadopago)",
       "Bash(pnpm remove @react-oauth/google)",
       "Bash(npx tsc --noEmit)",
-      "Bash(pnpm run build)"
+      "Bash(pnpm run build)",
+      "Bash(pnpm run db:migrate)"
     ]
   }
 }

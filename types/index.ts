@@ -14,6 +14,21 @@ export type ScheduleRange = { start: string; end: string; price: number }; // 'H
 // Key = day of week as string ('0'=Sun … '6'=Sat)
 export type AdvancedScheduleConfig = Partial<Record<string, ScheduleRange[]>>;
 
+export interface Service {
+  id: string;
+  businessId: string;
+  name: string;
+  description: string;
+  slotDuration: 30 | 45 | 60;
+  basePrice: number;
+  workingDays: number[]; // 0=Dom … 6=Sáb
+  workingHoursStart: string; // HH:MM
+  workingHoursEnd: string;   // HH:MM
+  scheduleConfig?: AdvancedScheduleConfig; // Max plan: per-day ranges
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Business {
   id: string;
   slug: string;
@@ -42,18 +57,20 @@ export interface Business {
 
 export interface Slot {
   id: string;
-  businessId: string;
+  serviceId: string;
+  businessId: string; // kept for routing convenience
   date: string; // YYYY-MM-DD
   startTime: string; // HH:MM
   endTime: string;   // HH:MM
   price: number;
   status: 'open' | 'booked' | 'blocked';
-  service?: string;
+  service?: string; // service name for display
 }
 
 export interface SlotBlock {
   id: string;
   businessId: string;
+  serviceId: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -76,6 +93,7 @@ export interface Booking {
   endTime?: string;
   price?: number;
   service?: string;
+  serviceId?: string;
 }
 
 export interface User {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { fetchSlots, fetchBookings } from "@/lib/api-client";
+import { fetchServices, fetchSlots, fetchBookings } from "@/lib/api-client";
 import { getPlanStatus } from "@/lib/plan-utils";
 import type { Slot, Booking } from "@/types";
 import { Card } from "@/components/ui/Card";
@@ -26,7 +26,15 @@ export default function DashboardPage() {
 
     useEffect(() => {
         if (!bizId) return;
-        Promise.all([fetchSlots(bizId, { date: today() }), fetchBookings(bizId)])
+        const todayDate = today();
+        Promise.all([
+            fetchServices(bizId).then((svcs) =>
+                svcs.length > 0
+                    ? Promise.all(svcs.map((svc) => fetchSlots(svc.id, { date: todayDate }))).then((all) => all.flat())
+                    : []
+            ),
+            fetchBookings(bizId),
+        ])
             .then(([s, b]) => {
                 setSlots(s);
                 setBookings(b);
@@ -37,9 +45,7 @@ export default function DashboardPage() {
 
     const todayStr = today();
     const todaySlots = slots.filter((s) => s.date === todayStr);
-    const todayBookings = bookings.filter((b) =>
-        slots.some((s) => s.id === b.slotId && s.date === todayStr),
-    );
+    const todayBookings = bookings.filter((b) => b.date === todayStr);
     const openCount = todaySlots.filter((s) => s.status === "open").length;
     const bookedCount = todaySlots.filter((s) => s.status === "booked").length;
     const revenue = todaySlots
@@ -123,29 +129,26 @@ export default function DashboardPage() {
                 </Card>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {todayBookings.map((booking) => {
-                        const slot = slots.find((s) => s.id === booking.slotId);
-                        return (
-                            <Card
-                                key={booking.id}
-                                className="p-4 flex items-center justify-between"
-                            >
-                                <div>
-                                    <p className="text-slate-800 font-semibold">
-                                        {booking.customerName}
-                                    </p>
-                                    <p className="text-slate-500 text-sm">
-                                        {slot?.startTime} – {slot?.endTime} ·{" "}
-                                        {slot?.service}
-                                    </p>
-                                    <p className="text-slate-400 text-xs">
-                                        {booking.customerEmail}
-                                    </p>
-                                </div>
-                                <Badge status={booking.status} />
-                            </Card>
-                        );
-                    })}
+                    {todayBookings.map((booking) => (
+                        <Card
+                            key={booking.id}
+                            className="p-4 flex items-center justify-between"
+                        >
+                            <div>
+                                <p className="text-slate-800 font-semibold">
+                                    {booking.customerName}
+                                </p>
+                                <p className="text-slate-500 text-sm">
+                                    {booking.startTime} – {booking.endTime}
+                                    {booking.service ? ` · ${booking.service}` : ""}
+                                </p>
+                                <p className="text-slate-400 text-xs">
+                                    {booking.customerEmail}
+                                </p>
+                            </div>
+                            <Badge status={booking.status} />
+                        </Card>
+                    ))}
                 </div>
             )}
 

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { fetchBusiness, fetchSlots } from '@/lib/api-client';
-import type { Business, Slot } from '@/types';
+import { fetchBusiness, fetchServices, fetchSlots } from '@/lib/api-client';
+import type { Business, Service, Slot } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { BookingCalendar } from '@/components/BookingCalendar';
 import { Card } from '@/components/ui/Card';
@@ -15,24 +15,39 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function BusinessPage() {
   const { businessSlug } = useParams() as { businessSlug: string };
   const [business, setBusiness] = useState<Business | null | undefined>(undefined);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [slotsLoading, setSlotsLoading] = useState(true);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(true);
 
   useEffect(() => {
     fetchBusiness(businessSlug).then(setBusiness).catch(() => setBusiness(null));
   }, [businessSlug]);
 
   useEffect(() => {
-    if (!business) return;
-    fetchSlots(business.id)
+    if (!business?.id) return;
+    fetchServices(business.id)
+      .then((svcs) => {
+        setServices(svcs);
+        if (svcs.length > 0) setSelectedServiceId(svcs[0].id);
+      })
+      .catch(console.error)
+      .finally(() => setServicesLoading(false));
+  }, [business?.id]);
+
+  useEffect(() => {
+    if (!selectedServiceId) return;
+    setSlotsLoading(true);
+    fetchSlots(selectedServiceId)
       .then(setSlots)
       .catch(console.error)
       .finally(() => setSlotsLoading(false));
-  }, [business?.id]);
+  }, [selectedServiceId]);
 
-  const businessesLoading = business === undefined;
+  const businessLoading = business === undefined;
 
-  if (businessesLoading) {
+  if (businessLoading) {
     return (
       <div className="min-h-screen">
         <Navbar />
@@ -45,7 +60,6 @@ export default function BusinessPage() {
             <Skeleton className="h-4 w-40" />
           </div>
           <Card className="p-6">
-            <Skeleton className="h-6 w-48 mb-6" />
             <div className="flex flex-col gap-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
             </div>
@@ -79,6 +93,8 @@ export default function BusinessPage() {
     );
   }
 
+  const selectedService = services.find((s) => s.id === selectedServiceId);
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -102,18 +118,59 @@ export default function BusinessPage() {
           <p className="text-slate-400 text-sm mt-1">por {business.ownerName}</p>
         </div>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6">Turnos disponibles</h2>
-          {slotsLoading ? (
-            <div className="flex flex-col gap-3">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
-            </div>
-          ) : slots.length === 0 ? (
-            <p className="text-slate-400">No hay turnos disponibles en este momento.</p>
-          ) : (
-            <BookingCalendar slots={slots} businessSlug={business.slug} />
-          )}
-        </Card>
+        {servicesLoading ? (
+          <div className="flex gap-2 mb-4">
+            {[1, 2].map((i) => <Skeleton key={i} className="h-10 w-28 rounded-xl" />)}
+          </div>
+        ) : services.length === 0 ? (
+          <Card className="p-6 text-center">
+            <p className="text-slate-400">Este negocio aún no tiene servicios disponibles.</p>
+          </Card>
+        ) : (
+          <>
+            {/* Service tabs — only shown if multiple services */}
+            {services.length > 1 && (
+              <div className="flex gap-2 flex-wrap mb-4">
+                {services.map((svc) => (
+                  <button
+                    key={svc.id}
+                    onClick={() => setSelectedServiceId(svc.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                      selectedServiceId === svc.id
+                        ? 'bg-indigo-50 text-indigo-600 border-indigo-300'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                  >
+                    {svc.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Card className="p-6">
+              {selectedService && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-slate-800">{selectedService.name}</h2>
+                  {selectedService.description && (
+                    <p className="text-slate-500 text-sm mt-1">{selectedService.description}</p>
+                  )}
+                  <p className="text-slate-400 text-xs mt-1">
+                    {selectedService.slotDuration} min · desde ${selectedService.basePrice.toLocaleString('es-AR')}
+                  </p>
+                </div>
+              )}
+              {slotsLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
+                </div>
+              ) : slots.length === 0 ? (
+                <p className="text-slate-400">No hay turnos disponibles para este servicio.</p>
+              ) : (
+                <BookingCalendar slots={slots} businessSlug={business.slug} />
+              )}
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { getPlanStatus } from "@/lib/plan-utils";
 import type { BusinessFormValues } from "@/components/business/BusinessForm";
 import { BusinessForm } from "@/components/business/BusinessForm";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +14,6 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
 
     const business = businesses.find((b) => b.id === user?.businessId);
-    const planStatus = business ? getPlanStatus(business) : null;
 
     async function handleSubmit(values: BusinessFormValues) {
         setLoading(true);
@@ -38,15 +37,9 @@ export default function SettingsPage() {
 
     return (
         <div>
-            <div className="mb-8 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800">
-                        Mi negocio
-                    </h1>
-                    <p className="text-slate-400 mt-1">
-                        Editá los parámetros de {business.name}
-                    </p>
-                </div>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-slate-800">Mi negocio</h1>
+                <p className="text-slate-400 mt-1">Editá los parámetros de {business.name}</p>
             </div>
 
             <Card className="p-6 sm:p-8 mb-6">
@@ -56,22 +49,27 @@ export default function SettingsPage() {
                     onSubmit={handleSubmit}
                     loading={loading}
                     submitLabel="Guardar cambios"
-                    planStatus={planStatus}
                 />
+            </Card>
+
+            <Card className="p-5 mb-4">
+                <Link href="/dashboard/settings/services" className="flex items-center justify-between group">
+                    <div>
+                        <p className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">Servicios</p>
+                        <p className="text-slate-400 text-sm">Gestioná los servicios que ofrecés</p>
+                    </div>
+                    <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </Link>
             </Card>
 
             <ConnectMercadoPago business={business} />
 
-            {/* Slug info */}
             <Card className="p-4 mt-6">
-                <p className="text-slate-400 text-xs mb-1">
-                    URL pública de tu negocio
-                </p>
-                <p className="text-indigo-500 text-sm font-mono">
-                    yzen-turnero.vercel.app/{business.slug}
-                </p>
+                <p className="text-slate-400 text-xs mb-1">URL pública de tu negocio</p>
+                <p className="text-indigo-500 text-sm font-mono">yzen-turnero.vercel.app/{business.slug}</p>
             </Card>
-
         </div>
     );
 }

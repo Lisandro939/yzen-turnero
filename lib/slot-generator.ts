@@ -29,6 +29,7 @@ export function generateSlotsForBusiness(
       cur += business.slotDuration;
       const endTime = `${pad(Math.floor(cur / 60))}:${pad(cur % 60)}`;
       result.push({
+        serviceId: `svc-${business.id}`,
         businessId: business.id,
         date: dateStr,
         startTime,

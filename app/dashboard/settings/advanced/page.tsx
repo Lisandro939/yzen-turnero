@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getPlanStatus } from '@/lib/plan-utils';
-import type { AdvancedScheduleConfig, ScheduleRange } from '@/types';
+import { fetchService, updateService } from '@/lib/api-client';
+import type { AdvancedScheduleConfig, ScheduleRange, Service } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -53,16 +54,20 @@ function stateToConfig(state: Record<string, DayState>): AdvancedScheduleConfig 
 }
 
 export default function AdvancedSettingsPage() {
-    const { user, businesses, updateBusiness } = useAuth();
+    const { user, businesses } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const serviceId = searchParams.get('serviceId');
 
     const business = businesses.find((b) => b.id === user?.businessId);
     const planStatus = business ? getPlanStatus(business) : null;
 
+    const [service, setService] = useState<Service | null>(null);
     const [dayState, setDayState] = useState<Record<string, DayState>>(() =>
-        stateFromConfig(business?.scheduleConfig),
+        stateFromConfig(undefined),
     );
     const [saving, setSaving] = useState(false);
+    const [loadingService, setLoadingService] = useState(true);
 
     useEffect(() => {
         // Redirect if not Max plan
@@ -71,12 +76,23 @@ export default function AdvancedSettingsPage() {
         }
     }, [planStatus, router]);
 
-    // Re-init when business loads
     useEffect(() => {
-        if (business) {
-            setDayState(stateFromConfig(business.scheduleConfig));
+        if (!serviceId) {
+            router.replace('/dashboard/settings/services');
+            return;
         }
-    }, [business?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+        fetchService(serviceId)
+            .then((svc) => {
+                if (!svc) {
+                    router.replace('/dashboard/settings/services');
+                    return;
+                }
+                setService(svc);
+                setDayState(stateFromConfig(svc.scheduleConfig));
+            })
+            .catch(() => router.replace('/dashboard/settings/services'))
+            .finally(() => setLoadingService(false));
+    }, [serviceId, router]);
 
     function toggleDay(day: string) {
         setDayState((prev) => ({
@@ -133,7 +149,7 @@ export default function AdvancedSettingsPage() {
     }
 
     async function handleSave() {
-        if (!business) return;
+        if (!service) return;
         if (!validateRanges()) {
             toast.error({ title: 'Rangos inválidos', description: 'Revisá que los horarios no se superpongan y que cada franja tenga un inicio menor al fin.' });
             return;
@@ -141,7 +157,7 @@ export default function AdvancedSettingsPage() {
         setSaving(true);
         try {
             await toast.promise(
-                updateBusiness(business.id, { scheduleConfig: stateToConfig(dayState) }),
+                updateService(service.id, { scheduleConfig: stateToConfig(dayState) }),
                 {
                     loading: { title: 'Guardando configuración...' },
                     success: { title: 'Configuración guardada' },
@@ -159,11 +175,19 @@ export default function AdvancedSettingsPage() {
         return null; // redirect in progress
     }
 
+    if (loadingService || !service) {
+        return (
+            <div className="w-full">
+                <p className="text-slate-400">Cargando servicio...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-slate-800">Configuración avanzada</h1>
-                <p className="text-slate-400 mt-1">Configurá los horarios y precios por día — Plan Max</p>
+                <p className="text-slate-400 mt-1">{service.name} — franjas y precios por día</p>
             </div>
 
             <div className="flex flex-col gap-4 mb-6">

@@ -13,17 +13,17 @@ export async function DELETE(_request: NextRequest, { params }: Context) {
     }
 
     const { id } = await params;
-    const { businessId } = parseSlotId(id);
+    const { serviceId } = parseSlotId(id);
 
-    // Verify the session user owns this business
-    const bizResult = await db.execute({
-      sql: 'SELECT owner_email FROM businesses WHERE id = ?',
-      args: [businessId],
+    // Verify the session user owns the business that owns this service
+    const svcResult = await db.execute({
+      sql: 'SELECT b.owner_email FROM services s JOIN businesses b ON b.id = s.business_id WHERE s.id = ?',
+      args: [serviceId],
     });
-    if (bizResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    if (svcResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Service not found' }, { status: 404 });
     }
-    if (String(bizResult.rows[0].owner_email) !== session.user.email) {
+    if (String(svcResult.rows[0].owner_email) !== session.user.email) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

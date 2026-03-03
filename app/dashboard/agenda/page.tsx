@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "@/lib/auth-context";
 import {
+    fetchServices,
     fetchSlots,
     fetchBookings,
     blockSlot,
     unblockSlot,
 } from "@/lib/api-client";
-import type { Slot, Booking } from "@/types";
+import type { Slot, Booking, Service } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -66,6 +67,8 @@ function slotColors(status: Slot["status"]) {
 // ── Page ───────────────────────────────────────────────────────────────────
 export default function AgendaPage() {
     const { user } = useAuth();
+    const [services, setServices] = useState<Service[]>([]);
+    const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
     const [slots, setSlots] = useState<Slot[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -76,10 +79,23 @@ export default function AgendaPage() {
     const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
     const today = toYMD(new Date());
 
+    // Load services
     useEffect(() => {
         if (!user?.businessId) return;
+        fetchServices(user.businessId)
+            .then((svcs) => {
+                setServices(svcs);
+                if (svcs.length > 0) setSelectedServiceId(svcs[0].id);
+            })
+            .catch(console.error);
+    }, [user?.businessId]);
+
+    // Load slots and bookings when selected service changes
+    useEffect(() => {
+        if (!user?.businessId || !selectedServiceId) return;
+        setLoading(true);
         Promise.all([
-            fetchSlots(user.businessId, {}),
+            fetchSlots(selectedServiceId, {}),
             fetchBookings(user.businessId),
         ])
             .then(([s, b]) => {
@@ -88,7 +104,7 @@ export default function AgendaPage() {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [user?.businessId]);
+    }, [user?.businessId, selectedServiceId]);
 
     const bookingBySlotId = useMemo(() => {
         const map: Record<string, Booking> = {};
@@ -163,6 +179,25 @@ export default function AgendaPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Service tabs */}
+            {services.length > 1 && (
+                <div className="flex gap-2 flex-wrap mb-4">
+                    {services.map((svc) => (
+                        <button
+                            key={svc.id}
+                            onClick={() => setSelectedServiceId(svc.id)}
+                            className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${
+                                selectedServiceId === svc.id
+                                    ? 'bg-indigo-50 text-indigo-600 border-indigo-300'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                            }`}
+                        >
+                            {svc.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Week navigation */}
             <div className="flex items-center gap-3 mb-3">

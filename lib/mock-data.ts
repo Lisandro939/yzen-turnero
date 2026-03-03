@@ -68,6 +68,7 @@ function makeSlots(businessId: string, timeSlots: { start: string; end: string; 
       const isBooked = idx % 4 === 0;
       slots.push({
         id: slotId,
+        serviceId: `svc-${businessId}`,
         businessId,
         date,
         startTime: ts.start,

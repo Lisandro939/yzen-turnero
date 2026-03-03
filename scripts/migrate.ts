@@ -76,6 +76,9 @@ async function migrate() {
     `ALTER TABLE bookings ADD COLUMN service TEXT`,
     // Advanced schedule config for Max plan
     `ALTER TABLE businesses ADD COLUMN schedule_config TEXT`,
+    // Multi-service architecture
+    `ALTER TABLE bookings ADD COLUMN service_id TEXT`,
+    `ALTER TABLE slot_blocks ADD COLUMN service_id TEXT`,
   ];
   for (const sql of alterStatements) {
     try {
@@ -115,10 +118,52 @@ async function migrate() {
       date        TEXT NOT NULL,
       start_time  TEXT NOT NULL,
       end_time    TEXT NOT NULL,
+      service_id  TEXT,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
   console.log('✓ slot_blocks table created (or already existed)');
+
+  // Create services table
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS services (
+      id                  TEXT PRIMARY KEY,
+      business_id         TEXT NOT NULL,
+      name                TEXT NOT NULL,
+      description         TEXT NOT NULL DEFAULT '',
+      slot_duration       INTEGER NOT NULL DEFAULT 30,
+      base_price          REAL NOT NULL DEFAULT 0,
+      working_days        TEXT NOT NULL DEFAULT '[1,2,3,4,5]',
+      working_hours_start TEXT NOT NULL DEFAULT '09:00',
+      working_hours_end   TEXT NOT NULL DEFAULT '18:00',
+      schedule_config     TEXT,
+      is_active           INTEGER NOT NULL DEFAULT 1,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  console.log('✓ services table created (or already existed)');
+
+  // Backfill: create a default service for each business that has none
+  await db.execute(`
+    INSERT OR IGNORE INTO services
+      (id, business_id, name, description, slot_duration, base_price,
+       working_days, working_hours_start, working_hours_end, schedule_config)
+    SELECT
+      'svc-' || id, id, 'Servicio principal', '',
+      slot_duration, base_price, working_days,
+      working_hours_start, working_hours_end, schedule_config
+    FROM businesses
+  `);
+  console.log('✓ Default services created for existing businesses');
+
+  // Backfill service_id on existing bookings and slot_blocks
+  await db.execute(`
+    UPDATE bookings SET service_id = 'svc-' || business_id WHERE service_id IS NULL
+  `);
+  await db.execute(`
+    UPDATE slot_blocks SET service_id = 'svc-' || business_id WHERE service_id IS NULL
+  `);
+  console.log('✓ service_id backfilled on bookings and slot_blocks');
 
   // Give trial period to any existing business that has none
   await db.execute(`

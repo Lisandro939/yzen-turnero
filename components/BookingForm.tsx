@@ -46,6 +46,7 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
                     body: JSON.stringify({
                         slotId: slot.id,
                         businessId: slot.businessId,
+                        serviceId: slot.serviceId,
                         customerName: form.name,
                         customerEmail: form.email,
                         customerPhone: form.phone,
@@ -74,6 +75,7 @@ export function BookingForm({ slot, businessSlug, business }: BookingFormProps) 
                     createBooking({
                         slotId: slot.id,
                         businessId: slot.businessId,
+                        serviceId: slot.serviceId,
                         customerName: form.name,
                         customerEmail: form.email,
                         customerPhone: form.phone,

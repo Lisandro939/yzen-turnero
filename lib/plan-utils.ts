@@ -1,7 +1,7 @@
 import type { Business } from "@/types";
 
-export const PLAN_PRICES = { pro: 7.5, max: 12 } as const;
-// export const PLAN_PRICES = { pro: 7500, max: 12000 } as const;
+// export const PLAN_PRICES = { pro: 7.5, max: 12 } as const;
+export const PLAN_PRICES = { pro: 7500, max: 12 } as const;
 
 export type PlanStatus = {
     active: boolean;
@@ -20,18 +20,7 @@ export function getPlanStatus(business: Business): PlanStatus {
         ? new Date(business.planExpiresAt)
         : null;
 
-    if (trialEnd && trialEnd > now && !planExpiry) {
-        const daysLeft = Math.ceil(
-            (trialEnd.getTime() - now.getTime()) / 86400000,
-        );
-        return {
-            active: true,
-            plan: "pro",
-            daysLeft,
-            inTrial: true,
-            expiring: daysLeft <= 7,
-        };
-    }
+    // Paid plan takes priority over trial
     if (planExpiry && planExpiry > now) {
         const daysLeft = Math.ceil(
             (planExpiry.getTime() - now.getTime()) / 86400000,
@@ -44,6 +33,21 @@ export function getPlanStatus(business: Business): PlanStatus {
             expiring: daysLeft <= 7,
         };
     }
+
+    // Trial fallback — use actual plan field if already set (e.g. upgraded to max)
+    if (trialEnd && trialEnd > now) {
+        const daysLeft = Math.ceil(
+            (trialEnd.getTime() - now.getTime()) / 86400000,
+        );
+        return {
+            active: true,
+            plan: business.plan ?? "pro",
+            daysLeft,
+            inTrial: true,
+            expiring: daysLeft <= 7,
+        };
+    }
+
     return {
         active: false,
         plan: null,

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
                 : new Date(now);
             base.setDate(base.getDate() + 30);
             await db.execute({
-                sql: 'UPDATE businesses SET plan = ?, plan_expires_at = ? WHERE id = ?',
+                sql: 'UPDATE businesses SET plan = ?, plan_expires_at = ?, trial_ends_at = datetime(\'now\') WHERE id = ?',
                 args: [planType, base.toISOString(), businessId],
             });
             return NextResponse.json({ ok: true });

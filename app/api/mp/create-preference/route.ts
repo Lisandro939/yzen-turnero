@@ -5,6 +5,7 @@ import { createPaymentPreference } from '@/lib/mercadopago';
 interface Body {
     slotId: string;
     businessId: string;
+    serviceId?: string;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -18,7 +19,7 @@ interface Body {
 export async function POST(request: NextRequest) {
     try {
         const body: Body = await request.json();
-        const { slotId, businessId, customerName, customerEmail, customerPhone,
+        const { slotId, businessId, serviceId, customerName, customerEmail, customerPhone,
                 date, startTime, endTime, price, service } = body;
 
         // Availability check
@@ -56,16 +57,16 @@ export async function POST(request: NextRequest) {
         const createdAt = new Date().toISOString();
         await db.execute({
             sql: `INSERT INTO bookings
-                    (id, slot_id, business_id, customer_name, customer_email,
+                    (id, slot_id, business_id, service_id, customer_name, customer_email,
                      customer_phone, status, created_at, date, start_time, end_time, price, service)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            args: [bookingId, slotId, businessId, customerName,
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            args: [bookingId, slotId, businessId, serviceId ?? null, customerName,
                    customerEmail, customerPhone, 'pending', createdAt,
                    date, startTime, endTime, price, service ?? null],
         });
 
         // Create MP payment preference
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+        const baseUrl = request.nextUrl.origin;
         const { id: preferenceId, initPoint, sandboxInitPoint } =
             await createPaymentPreference(
                 business.mpAccessToken,
@@ -79,11 +80,11 @@ export async function POST(request: NextRequest) {
                     },
                 ],
                 {
-                    success: `${appUrl}/${business.slug}/book/confirm?bookingId=${bookingId}&mp=approved`,
-                    failure: `${appUrl}/${business.slug}/book?slotId=${slotId}&mp=failed`,
-                    pending: `${appUrl}/${business.slug}/book/confirm?bookingId=${bookingId}&mp=pending`,
+                    success: `${baseUrl}/${business.slug}/book/confirm?bookingId=${bookingId}&mp=approved`,
+                    failure: `${baseUrl}/${business.slug}/book?slotId=${slotId}&mp=failed`,
+                    pending: `${baseUrl}/${business.slug}/book/confirm?bookingId=${bookingId}&mp=pending`,
                 },
-                `${appUrl}/api/mp/webhook`,
+                `${baseUrl}/api/mp/webhook`,
             );
 
         // Save preference ID on booking

@@ -1,4 +1,4 @@
-import type { Business, Slot, ScheduleRange } from '@/types';
+import type { Service, Slot, ScheduleRange } from '@/types';
 
 /**
  * Generate a deterministic slot ID from its components.
@@ -11,19 +11,19 @@ export function slotId(businessId: string, date: string, startTime: string): str
 /**
  * Parse a slot ID back into its components.
  * Suffix is "-YYYY-MM-DD-HHMM" = 16 chars (includes the dash separator before the date).
- * Example: "slot-biz-1-2026-03-05-0900"
- *   withoutPrefix = "biz-1-2026-03-05-0900"
- *   businessId    = slice(0, -16) → "biz-1"
+ * Example: "slot-svc-biz-1-2026-03-05-0900"
+ *   withoutPrefix = "svc-biz-1-2026-03-05-0900"
+ *   serviceId     = slice(0, -16) → "svc-biz-1"
  *   date          = slice(-15, -5) → "2026-03-05"
  *   rawTime       = slice(-4)      → "0900"
  */
-export function parseSlotId(id: string): { businessId: string; date: string; startTime: string } {
+export function parseSlotId(id: string): { serviceId: string; date: string; startTime: string } {
   const withoutPrefix = id.slice(5); // strip "slot-"
-  const businessId = withoutPrefix.slice(0, -16);
+  const serviceId = withoutPrefix.slice(0, -16);
   const date = withoutPrefix.slice(-15, -5);
   const rawTime = withoutPrefix.slice(-4);
   const startTime = `${rawTime.slice(0, 2)}:${rawTime.slice(2)}`;
-  return { businessId, date, startTime };
+  return { serviceId, date, startTime };
 }
 
 /** Add `minutes` to a "HH:MM" string, returns "HH:MM" */
@@ -42,29 +42,30 @@ function toMinutes(time: string): number {
 }
 
 /**
- * Compute all slots for a business on a given date.
+ * Compute all slots for a service on a given date.
  * bookedIds: Set of slot IDs with confirmed bookings.
  * blockedIds: Set of slot IDs blocked by the owner.
- * Returns empty array if the business is closed that day.
+ * Returns empty array if the service is closed that day.
  */
 export function computeSlots(
-  business: Business,
-  date: string, // 'YYYY-MM-DD'
+  service: Service,
+  businessId: string,    // embedded in Slot.businessId for routing convenience
+  date: string,          // 'YYYY-MM-DD'
   bookedIds: Set<string>,
   blockedIds: Set<string> = new Set(),
 ): Slot[] {
   const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun…6=Sat
 
-  // Check if it's a working day (Pro) or has an advanced config entry (Max)
+  // Check if it's a working day or has an advanced config entry
   const advancedRanges: ScheduleRange[] | undefined =
-    business.scheduleConfig?.[String(dayOfWeek)];
+    service.scheduleConfig?.[String(dayOfWeek)];
 
   const hasAdvanced = advancedRanges && advancedRanges.length > 0;
-  const isWorkingDay = business.workingDays.includes(dayOfWeek);
+  const isWorkingDay = service.workingDays.includes(dayOfWeek);
 
   if (!hasAdvanced && !isWorkingDay) return [];
 
-  const duration = business.slotDuration;
+  const duration = service.slotDuration;
   const slots: Slot[] = [];
 
   function slotStatus(id: string): Slot['status'] {
@@ -74,38 +75,42 @@ export function computeSlots(
   }
 
   if (hasAdvanced) {
-    // Max plan: iterate each time range
+    // Advanced schedule: iterate each time range
     for (const range of advancedRanges!) {
       let current = range.start;
       while (toMinutes(current) + duration <= toMinutes(range.end)) {
         const end = addMinutes(current, duration);
-        const id = slotId(business.id, date, current);
+        const id = slotId(service.id, date, current);
         slots.push({
           id,
-          businessId: business.id,
+          serviceId: service.id,
+          businessId,
           date,
           startTime: current,
           endTime: end,
           price: range.price,
           status: slotStatus(id),
+          service: service.name,
         });
         current = end;
       }
     }
   } else {
-    // Pro plan: single daily time range
-    let current = business.workingHoursStart;
-    while (toMinutes(current) + duration <= toMinutes(business.workingHoursEnd)) {
+    // Standard schedule: single daily time range
+    let current = service.workingHoursStart;
+    while (toMinutes(current) + duration <= toMinutes(service.workingHoursEnd)) {
       const end = addMinutes(current, duration);
-      const id = slotId(business.id, date, current);
+      const id = slotId(service.id, date, current);
       slots.push({
         id,
-        businessId: business.id,
+        serviceId: service.id,
+        businessId,
         date,
         startTime: current,
         endTime: end,
-        price: business.basePrice,
+        price: service.basePrice,
         status: slotStatus(id),
+        service: service.name,
       });
       current = end;
     }
