@@ -1,7 +1,7 @@
 import type { Business } from "@/types";
 
 // export const PLAN_PRICES = { pro: 7.5, max: 12 } as const;
-export const PLAN_PRICES = { pro: 7500, max: 12 } as const;
+export const PLAN_PRICES = { pro: 7500, max: 12000 } as const;
 
 export type PlanStatus = {
     active: boolean;

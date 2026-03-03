@@ -5,6 +5,12 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getPlanStatus, PLAN_PRICES } from "@/lib/plan-utils";
+
+const ORIGINAL_PRICES = { pro: 15000, max: 30000 } as const;
+
+function savingsPercent(plan: "pro" | "max") {
+    return Math.round(((ORIGINAL_PRICES[plan] - PLAN_PRICES[plan]) / ORIGINAL_PRICES[plan]) * 100);
+}
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/lib/toast";
@@ -202,15 +208,17 @@ export default function PlanPage() {
                                 )}
                         </div>
                         <div className="mb-4">
-                            <span className="text-2xl font-bold text-slate-800">
-                                ${PLAN_PRICES.pro.toLocaleString("es-AR")}
-                            </span>
-                            <span className="text-slate-400 text-sm">
-                                {" "}
-                                /mes
-                            </span>
-                            <p className="text-slate-400 text-xs line-through">
-                                $15.000
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-2xl font-bold text-slate-800">
+                                    ${PLAN_PRICES.pro.toLocaleString("es-AR")}
+                                </span>
+                                <span className="text-slate-400 text-sm">/mes</span>
+                                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                    Ahorrás {savingsPercent("pro")}%
+                                </span>
+                            </div>
+                            <p className="text-slate-400 text-xs mt-0.5">
+                                Antes: <span className="line-through">${ORIGINAL_PRICES.pro.toLocaleString("es-AR")}</span>
                             </p>
                         </div>
                         <ul className="flex flex-col gap-2 mb-6 flex-1">
@@ -256,15 +264,17 @@ export default function PlanPage() {
                             ) : null}
                         </div>
                         <div className="mb-4">
-                            <span className="text-2xl font-bold text-slate-800">
-                                ${PLAN_PRICES.max.toLocaleString("es-AR")}
-                            </span>
-                            <span className="text-slate-400 text-sm">
-                                {" "}
-                                /mes
-                            </span>
-                            <p className="text-slate-400 text-xs line-through">
-                                $30.000
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-2xl font-bold text-slate-800">
+                                    ${PLAN_PRICES.max.toLocaleString("es-AR")}
+                                </span>
+                                <span className="text-slate-400 text-sm">/mes</span>
+                                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                    Ahorrás {savingsPercent("max")}%
+                                </span>
+                            </div>
+                            <p className="text-slate-400 text-xs mt-0.5">
+                                Antes: <span className="line-through">${ORIGINAL_PRICES.max.toLocaleString("es-AR")}</span>
                             </p>
                         </div>
                         <ul className="flex flex-col gap-2 mb-6 flex-1">
