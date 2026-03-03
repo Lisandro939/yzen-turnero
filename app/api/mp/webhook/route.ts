@@ -14,11 +14,24 @@ export async function POST(request: NextRequest) {
         const xSignature = request.headers.get("x-signature") ?? "";
         const xRequestId = request.headers.get("x-request-id") ?? "";
 
-        const body = await request.json();
-        const dataId = String(body?.data?.id ?? "");
+        let dataId = "";
+        let body = null;
+
+        const contentType = request.headers.get("content-type") ?? "";
+
+        if (contentType.includes("application/json")) {
+            body = await request.json();
+            dataId = body?.data?.id ? String(body.data.id) : "";
+        } else {
+            console.log("MP webhook: invalid content-type", contentType);
+        }
 
         if (!dataId) {
-            console.log("MP webhook: missing data.id");
+            console.log("MP webhook: body recibido:", body);
+            console.log(
+                "MP webhook: query:",
+                request.nextUrl.searchParams.toString(),
+            );
             return NextResponse.json({ ok: true });
         }
 
