@@ -4,9 +4,16 @@ import type { PaymentResponse } from "mercadopago/dist/clients/payment/commonTyp
 import { db } from "@/lib/db";
 import { verifyWebhookSignature } from "@/lib/mercadopago";
 
-type SafePaymentResponse = PaymentResponse & {
+type ExtendedTransactionData = {
+    preference_id?: string;
+};
+
+type ExtendedPaymentResponse = PaymentResponse & {
     preference_id?: string;
     external_reference?: string;
+    point_of_interaction?: {
+        transaction_data?: ExtendedTransactionData;
+    };
 };
 
 export async function POST(request: NextRequest) {
@@ -60,9 +67,14 @@ export async function POST(request: NextRequest) {
 
         const paymentData = (await paymentClient.get({
             id: dataId,
-        })) as SafePaymentResponse;
+        })) as ExtendedPaymentResponse;
 
-        const preferenceId = paymentData.preference_id ?? null;
+        console.log(JSON.stringify(paymentData, null, 2));
+
+        const preferenceId =
+            paymentData.preference_id ??
+            paymentData.point_of_interaction?.transaction_data?.preference_id ??
+            null;
         const mpStatus = paymentData.status ?? null;
         const paymentId = paymentData.id?.toString() ?? null;
         const externalRef = paymentData.external_reference ?? "";
