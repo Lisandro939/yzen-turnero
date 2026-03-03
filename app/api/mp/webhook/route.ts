@@ -1,76 +1,126 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { db } from '@/lib/db';
-import { verifyWebhookSignature } from '@/lib/mercadopago';
+import { NextRequest, NextResponse } from "next/server";
+import { MercadoPagoConfig, Payment } from "mercadopago";
+import type { PaymentResponse } from "mercadopago/dist/clients/payment/commonTypes";
+import { db } from "@/lib/db";
+import { verifyWebhookSignature } from "@/lib/mercadopago";
+
+type SafePaymentResponse = PaymentResponse & {
+    preference_id?: string;
+    external_reference?: string;
+};
 
 export async function POST(request: NextRequest) {
     try {
-        const xSignature = request.headers.get('x-signature') ?? '';
-        const xRequestId = request.headers.get('x-request-id') ?? '';
+        const xSignature = request.headers.get("x-signature") ?? "";
+        const xRequestId = request.headers.get("x-request-id") ?? "";
 
         const body = await request.json();
-        const dataId = String(body?.data?.id ?? '');
+        const dataId = String(body?.data?.id ?? "");
 
-        // Verify signature
-        if (!verifyWebhookSignature(xSignature, xRequestId, dataId)) {
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-        }
-
-        // Only handle payment events
-        if (body.type !== 'payment') {
+        if (!dataId) {
+            console.log("MP webhook: missing data.id");
             return NextResponse.json({ ok: true });
         }
 
-        // Fetch payment from MP using platform-level token
+        // 🔐 Verify signature (never return 401 to MP)
+        const isValidSignature = verifyWebhookSignature(
+            xSignature,
+            xRequestId,
+            dataId,
+        );
+
+        if (!isValidSignature) {
+            console.log("MP webhook: invalid signature");
+            return NextResponse.json({ ok: true });
+        }
+
+        if (body.type !== "payment") {
+            return NextResponse.json({ ok: true });
+        }
+
+        // 💳 Fetch payment from Mercado Pago
         const client = new MercadoPagoConfig({
             accessToken: process.env.MP_PLATFORM_ACCESS_TOKEN!,
         });
-        const payment = new Payment(client);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const paymentData = await payment.get({ id: dataId }) as any;
 
-        const preferenceId = paymentData.preference_id;
-        const mpStatus = paymentData.status;
-        const paymentId = String(paymentData.id);
+        const paymentClient = new Payment(client);
 
-        if (!preferenceId) {
+        const paymentData = (await paymentClient.get({
+            id: dataId,
+        })) as SafePaymentResponse;
+
+        const preferenceId = paymentData.preference_id ?? null;
+        const mpStatus = paymentData.status ?? null;
+        const paymentId = paymentData.id?.toString() ?? null;
+        const externalRef = paymentData.external_reference ?? "";
+
+        if (!preferenceId || !paymentId || !mpStatus) {
+            console.log("MP webhook: missing critical payment data");
             return NextResponse.json({ ok: true });
         }
 
-        // Handle plan subscription payment via external_reference
-        const externalRef = String(paymentData.external_reference ?? '');
-        if (externalRef.startsWith('plan:') && mpStatus === 'approved') {
-            const [, businessId, planType] = externalRef.split(':');
-            const bizRes = await db.execute({
-                sql: 'SELECT plan_expires_at FROM businesses WHERE id = ?',
-                args: [businessId],
-            });
-            const currentExpiry = bizRes.rows[0]?.plan_expires_at;
-            const now = new Date();
-            const base = (currentExpiry && new Date(String(currentExpiry)) > now)
-                ? new Date(String(currentExpiry))
-                : new Date(now);
-            base.setDate(base.getDate() + 30);
-            await db.execute({
-                sql: 'UPDATE businesses SET plan = ?, plan_expires_at = ?, trial_ends_at = datetime(\'now\') WHERE id = ?',
-                args: [planType, base.toISOString(), businessId],
-            });
+        // ================================
+        // 🟢 HANDLE PLAN SUBSCRIPTION
+        // ================================
+        if (externalRef.startsWith("plan:") && mpStatus === "approved") {
+            const parts = externalRef.split(":");
+
+            if (parts.length === 3) {
+                const [, businessId, planType] = parts;
+
+                const bizRes = await db.execute({
+                    sql: "SELECT plan_expires_at FROM businesses WHERE id = ?",
+                    args: [businessId],
+                });
+
+                const currentExpiry = bizRes.rows[0]?.plan_expires_at;
+                const now = new Date();
+
+                const base =
+                    currentExpiry && new Date(String(currentExpiry)) > now
+                        ? new Date(String(currentExpiry))
+                        : new Date(now);
+
+                base.setDate(base.getDate() + 30);
+
+                await db.execute({
+                    sql: `
+            UPDATE businesses 
+            SET plan = ?, 
+                plan_expires_at = ?, 
+                trial_ends_at = datetime('now') 
+            WHERE id = ?
+          `,
+                    args: [planType, base.toISOString(), businessId],
+                });
+
+                console.log("Plan activated for business:", businessId);
+            }
+
             return NextResponse.json({ ok: true });
         }
 
-        // Map MP status to booking status
-        let bookingStatus: string;
-        if (mpStatus === 'approved') {
-            bookingStatus = 'approved';
-        } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
-            bookingStatus = 'rejected';
+        // ================================
+        // 📅 HANDLE BOOKING PAYMENT
+        // ================================
+
+        let bookingStatus: "approved" | "rejected" | "pending";
+
+        if (mpStatus === "approved") {
+            bookingStatus = "approved";
+        } else if (mpStatus === "rejected" || mpStatus === "cancelled") {
+            bookingStatus = "rejected";
         } else {
-            bookingStatus = 'pending';
+            bookingStatus = "pending";
         }
 
-        // Find booking by preference ID
         const bookingResult = await db.execute({
-            sql: 'SELECT id, slot_id FROM bookings WHERE mp_preference_id = ? LIMIT 1',
+            sql: `
+        SELECT id, slot_id, mp_payment_id 
+        FROM bookings 
+        WHERE mp_preference_id = ? 
+        LIMIT 1
+      `,
             args: [preferenceId],
         });
 
@@ -78,28 +128,42 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: true });
         }
 
-        const row = bookingResult.rows[0] as Record<string, unknown>;
-        const bookingId = String(row.id);
-        const slotId = String(row.slot_id);
+        const row = bookingResult.rows[0] as unknown as {
+            id: string;
+            slot_id: string;
+            mp_payment_id?: string | null;
+        };
 
-        // Update booking
+        const bookingId = row.id;
+        const slotId = row.slot_id;
+        const existingPaymentId = row.mp_payment_id ?? "";
+
+        // 🔁 Idempotency protection
+        if (existingPaymentId === paymentId) {
+            return NextResponse.json({ ok: true });
+        }
+
         await db.execute({
-            sql: 'UPDATE bookings SET status = ?, mp_payment_id = ? WHERE id = ?',
+            sql: `
+        UPDATE bookings 
+        SET status = ?, 
+            mp_payment_id = ? 
+        WHERE id = ?
+      `,
             args: [bookingStatus, paymentId, bookingId],
         });
 
-        // If rejected, re-open the slot
-        if (bookingStatus === 'rejected') {
+        if (bookingStatus === "rejected") {
             await db.execute({
-                sql: "UPDATE slots SET status = 'open' WHERE id = ?",
+                sql: `UPDATE slots SET status = 'open' WHERE id = ?`,
                 args: [slotId],
             });
         }
 
         return NextResponse.json({ ok: true });
-    } catch (err) {
-        // Always return 200 so MP doesn't retry for non-critical errors
-        console.error('MP webhook error:', err);
+    } catch (error) {
+        // ⚠️ Always return 200 so MP doesn't retry endlessly
+        console.error("MP webhook error:", error);
         return NextResponse.json({ ok: true });
     }
 }
