@@ -7,6 +7,7 @@ import { SlotCard } from './SlotCard';
 interface BookingCalendarProps {
   slots: Slot[];
   businessSlug: string;
+  disableBooking?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -14,7 +15,7 @@ function formatDate(dateStr: string) {
   return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-export function BookingCalendar({ slots, businessSlug }: BookingCalendarProps) {
+export function BookingCalendar({ slots, businessSlug, disableBooking }: BookingCalendarProps) {
   const dates = [...new Set(slots.map((s) => s.date))].sort();
   const [selectedDate, setSelectedDate] = useState(dates[0] ?? '');
 
@@ -56,7 +57,7 @@ export function BookingCalendar({ slots, businessSlug }: BookingCalendarProps) {
             <p className="text-slate-400 text-sm">No hay turnos para este día.</p>
           ) : (
             daySlots.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} businessSlug={businessSlug} />
+              <SlotCard key={slot.id} slot={slot} businessSlug={businessSlug} disableBooking={disableBooking} />
             ))
           )}
         </div>

@@ -181,6 +181,42 @@ async function migrate() {
   `);
   console.log('✓ Legacy slots table dropped');
 
+  // Rebuild bookings table without FK on slot_id (in case it was created with REFERENCES slots)
+  // Use separate execute calls — executeMultiple is unreliable for DDL on Turso
+  await db.execute('PRAGMA foreign_keys = OFF');
+  await db.execute(`DROP TABLE IF EXISTS bookings_v2`);
+  await db.execute(`
+    CREATE TABLE bookings_v2 (
+      id               TEXT PRIMARY KEY,
+      slot_id          TEXT,
+      business_id      TEXT NOT NULL,
+      customer_name    TEXT NOT NULL,
+      customer_email   TEXT NOT NULL,
+      customer_phone   TEXT NOT NULL DEFAULT '',
+      status           TEXT NOT NULL DEFAULT 'confirmed',
+      created_at       TEXT NOT NULL,
+      mp_preference_id TEXT,
+      mp_payment_id    TEXT,
+      date             TEXT,
+      start_time       TEXT,
+      end_time         TEXT,
+      price            REAL,
+      service          TEXT,
+      service_id       TEXT
+    )
+  `);
+  await db.execute(`
+    INSERT INTO bookings_v2
+      SELECT id, slot_id, business_id, customer_name, customer_email, customer_phone,
+             status, created_at, mp_preference_id, mp_payment_id, date, start_time,
+             end_time, price, service, service_id
+      FROM bookings
+  `);
+  await db.execute('DROP TABLE bookings');
+  await db.execute('ALTER TABLE bookings_v2 RENAME TO bookings');
+  await db.execute('PRAGMA foreign_keys = ON');
+  console.log('✓ bookings table rebuilt without legacy FK');
+
   process.exit(0);
 }
 

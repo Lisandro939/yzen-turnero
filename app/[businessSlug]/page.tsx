@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { fetchBusiness, fetchServices, fetchSlots } from '@/lib/api-client';
 import type { Business, Service, Slot } from '@/types';
-import { getPlanStatus } from '@/lib/plan-utils';
 import { Navbar } from '@/components/layout/Navbar';
 import { BookingCalendar } from '@/components/BookingCalendar';
 import { Card } from '@/components/ui/Card';
@@ -82,21 +81,8 @@ export default function BusinessPage() {
     );
   }
 
-  if (!business.mpAccessToken) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
-        <Navbar />
-        <p className="text-6xl mb-4">🔒</p>
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Negocio no disponible</h1>
-        <p className="text-slate-500 mb-6">Este negocio aún no está listo para recibir reservas.</p>
-        <Link href="/"><Button>Ver otros negocios</Button></Link>
-      </div>
-    );
-  }
-
   const selectedService = services.find((s) => s.id === selectedServiceId);
-  const planStatus = business ? getPlanStatus(business) : null;
-  const isTrial = planStatus?.inTrial === true;
+  const disableBooking = !business.mpAccessToken;
 
   return (
     <div className="min-h-screen">
@@ -162,24 +148,14 @@ export default function BusinessPage() {
                   </p>
                 </div>
               )}
-              {isTrial ? (
-                <div className="flex flex-col items-center gap-2 py-6 text-center">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mb-1">
-                    <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                  </div>
-                  <p className="text-slate-700 font-medium text-sm">Reservas no disponibles</p>
-                  <p className="text-slate-400 text-xs max-w-xs">Este negocio está en período de prueba. Las reservas estarán habilitadas cuando active su plan.</p>
-                </div>
-              ) : slotsLoading ? (
+              {slotsLoading ? (
                 <div className="flex flex-col gap-3">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
                 </div>
               ) : slots.length === 0 ? (
                 <p className="text-slate-400">No hay turnos disponibles para este servicio.</p>
               ) : (
-                <BookingCalendar slots={slots} businessSlug={business.slug} />
+                <BookingCalendar slots={slots} businessSlug={business.slug} disableBooking={disableBooking} />
               )}
             </Card>
           </>

@@ -27,8 +27,9 @@ export async function POST(request: NextRequest) {
         const [bookedRes, blockedRes] = await Promise.all([
             db.execute({
                 sql: `SELECT 1 FROM bookings
-                      WHERE slot_id = ? AND status NOT IN ('cancelled', 'rejected') LIMIT 1`,
-                args: [slotId],
+                      WHERE service_id = ? AND date = ? AND start_time = ?
+                      AND status NOT IN ('cancelled', 'rejected') LIMIT 1`,
+                args: [serviceId ?? null, date, startTime],
             }),
             db.execute({
                 sql: 'SELECT 1 FROM slot_blocks WHERE id = ? LIMIT 1',
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
                     (id, slot_id, business_id, service_id, customer_name, customer_email,
                      customer_phone, status, created_at, date, start_time, end_time, price, service)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            args: [bookingId, slotId, businessId, serviceId ?? null, customerName,
+            args: [bookingId, null, businessId, serviceId ?? null, customerName,
                    customerEmail, customerPhone, 'pending', createdAt,
                    date, startTime, endTime, price, service ?? null],
         });

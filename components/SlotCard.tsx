@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/Button';
 interface SlotCardProps {
   slot: Slot;
   businessSlug: string;
+  disableBooking?: boolean;
 }
 
 function isPast(date: string, startTime: string): boolean {
   return new Date(`${date}T${startTime}:00`) <= new Date();
 }
 
-export function SlotCard({ slot, businessSlug }: SlotCardProps) {
+export function SlotCard({ slot, businessSlug, disableBooking }: SlotCardProps) {
   const isOpen = slot.status === 'open';
   const canBook = isOpen && !isPast(slot.date, slot.startTime);
 
@@ -38,9 +39,13 @@ export function SlotCard({ slot, businessSlug }: SlotCardProps) {
       </div>
 
       {canBook && (
-        <Link href={`/${businessSlug}/book?slotId=${slot.id}`}>
-          <Button size="sm">Reservar</Button>
-        </Link>
+        disableBooking ? (
+          <Button size="sm" disabled>Reservar</Button>
+        ) : (
+          <Link href={`/${businessSlug}/book?slotId=${slot.id}`}>
+            <Button size="sm">Reservar</Button>
+          </Link>
+        )
       )}
     </div>
   );

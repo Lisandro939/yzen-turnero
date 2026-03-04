@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -30,10 +31,7 @@ export default function LoginPage() {
                     className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {loading ? (
-                        <svg className="animate-spin h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                        </svg>
+                        <Loader2 className="animate-spin h-5 w-5 text-slate-400" />
                     ) : (
                         <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
                             <path d="M47.5 24.5c0-1.6-.1-3.2-.4-4.7H24.5v8.9h13c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7-10.6 7-17.4z" fill="#4285F4" />

@@ -48,8 +48,9 @@ export async function POST(request: NextRequest) {
     // Availability check: is the slot already booked or blocked?
     const [bookedRes, blockedRes] = await Promise.all([
       db.execute({
-        sql: `SELECT 1 FROM bookings WHERE slot_id = ? AND status NOT IN ('cancelled','rejected') LIMIT 1`,
-        args: [body.slotId],
+        sql: `SELECT 1 FROM bookings WHERE service_id = ? AND date = ? AND start_time = ?
+              AND status NOT IN ('cancelled','rejected') LIMIT 1`,
+        args: [body.serviceId ?? null, body.date, body.startTime],
       }),
       db.execute({
         sql: 'SELECT 1 FROM slot_blocks WHERE id = ? LIMIT 1',
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       args: [
         id,
-        body.slotId,
+        null,
         body.serviceId ?? null,
         body.businessId,
         body.customerName,

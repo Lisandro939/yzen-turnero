@@ -15,7 +15,9 @@
       "Bash(pnpm remove @react-oauth/google)",
       "Bash(npx tsc --noEmit)",
       "Bash(pnpm run build)",
-      "Bash(pnpm run db:migrate)"
+      "Bash(pnpm run db:migrate)",
+      "WebFetch(domain:filofyapp.com)",
+      "Bash(pnpm add lucide-react)"
     ]
   }
 }
