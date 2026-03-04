@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, rowToBooking } from '@/lib/db';
+import { db, rowToBooking, rowToBusiness } from '@/lib/db';
+import { getPlanStatus } from '@/lib/plan-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,6 +59,19 @@ export async function POST(request: NextRequest) {
 
     if (bookedRes.rows.length > 0 || blockedRes.rows.length > 0) {
       return NextResponse.json({ error: 'Slot no longer available' }, { status: 409 });
+    }
+
+    // Block bookings for businesses in trial mode
+    const bizRes = await db.execute({
+      sql: 'SELECT * FROM businesses WHERE id = ? LIMIT 1',
+      args: [body.businessId],
+    });
+    if (bizRes.rows.length > 0) {
+      const biz = rowToBusiness(bizRes.rows[0] as Record<string, unknown>);
+      const planStatus = getPlanStatus(biz);
+      if (planStatus.inTrial) {
+        return NextResponse.json({ error: 'Este negocio está en período de prueba y no acepta reservas.' }, { status: 403 });
+      }
     }
 
     const id = `booking-${Date.now()}`;

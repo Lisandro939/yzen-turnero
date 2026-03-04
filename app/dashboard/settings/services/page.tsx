@@ -255,7 +255,7 @@ export default function ServicesSettingsPage() {
           <p className="text-slate-400 mt-1">Gestioná los servicios de {business.name}</p>
         </div>
         {!showAdd && (
-          <Button onClick={() => setShowAdd(true)} size="sm">
+          <Button onClick={() => setShowAdd(true)} size="sm" className="whitespace-nowrap">
             + Agregar
           </Button>
         )}

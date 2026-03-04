@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, rowToBusiness } from '@/lib/db';
 import { createPaymentPreference } from '@/lib/mercadopago';
+import { getPlanStatus } from '@/lib/plan-utils';
 
 interface Body {
     slotId: string;
@@ -50,6 +51,10 @@ export async function POST(request: NextRequest) {
 
         if (!business.mpAccessToken) {
             return NextResponse.json({ error: 'Business has no MP account connected' }, { status: 400 });
+        }
+
+        if (getPlanStatus(business).inTrial) {
+            return NextResponse.json({ error: 'Este negocio está en período de prueba y no acepta reservas.' }, { status: 403 });
         }
 
         // Insert booking with status = 'pending' + slot data

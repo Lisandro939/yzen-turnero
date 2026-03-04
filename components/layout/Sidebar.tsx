@@ -126,7 +126,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 transition-colors ${
                 isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
@@ -137,7 +137,7 @@ export function Sidebar() {
         })}
         <Link
           href="/plan"
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors relative ${
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 transition-colors relative ${
             isPlanActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
           }`}
         >
