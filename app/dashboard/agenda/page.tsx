@@ -9,12 +9,14 @@ import {
     fetchBookings,
     blockSlot,
     unblockSlot,
+    createBooking,
 } from "@/lib/api-client";
 import type { Slot, Booking, Service } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Input } from "@/components/ui/Input";
 import { toast } from "@/lib/toast";
 
 // ── Calendar config ────────────────────────────────────────────────────────
@@ -77,6 +79,9 @@ export default function AgendaPage() {
     const [blockingId, setBlockingId] = useState<string | null>(null);
     const [unblockingId, setUnblockingId] = useState<string | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+    const [ownerForm, setOwnerForm] = useState({ name: '', email: '', phone: '' });
+    const [ownerFormError, setOwnerFormError] = useState('');
+    const [bookingOwner, setBookingOwner] = useState(false);
     const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
     const today = toYMD(new Date());
 
@@ -107,9 +112,16 @@ export default function AgendaPage() {
             .finally(() => setLoading(false));
     }, [user?.businessId, selectedServiceId]);
 
-    const bookingBySlotId = useMemo(() => {
+    const bookingByKey = useMemo(() => {
         const map: Record<string, Booking> = {};
-        for (const b of bookings) if (b.slotId) map[b.slotId] = b;
+        for (const b of bookings) {
+            // Primary: slot_id (for legacy bookings)
+            if (b.slotId) map[b.slotId] = b;
+            // Secondary: serviceId+date+startTime (for all bookings — slot_id is null in DB)
+            if (b.serviceId && b.date && b.startTime) {
+                map[`${b.serviceId}-${b.date}-${b.startTime}`] = b;
+            }
+        }
         return map;
     }, [bookings]);
 
@@ -142,6 +154,55 @@ export default function AgendaPage() {
         }
     }
 
+    async function doOwnerBooking(slot: Slot) {
+        if (!ownerForm.name.trim()) {
+            setOwnerFormError('El nombre es obligatorio');
+            return;
+        }
+        setOwnerFormError('');
+        setBookingOwner(true);
+        try {
+            await toast.promise(
+                createBooking({
+                    slotId: slot.id,
+                    serviceId: slot.serviceId,
+                    businessId: user!.businessId!,
+                    customerName: ownerForm.name.trim(),
+                    customerEmail: ownerForm.email.trim(),
+                    customerPhone: ownerForm.phone.trim(),
+                    status: 'confirmed',
+                    date: slot.date,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    price: slot.price,
+                    service: slot.service ?? undefined,
+                }),
+                {
+                    loading: { title: 'Creando reserva...' },
+                    success: { title: 'Reserva creada' },
+                    error: { title: 'Error al crear la reserva' },
+                },
+            );
+            setSlots((prev) =>
+                prev.map((s) => s.id === slot.id ? { ...s, status: 'booked' } : s),
+            );
+            setBookings((prev) => {
+                // refetch lazily — just reset so it reloads on next open
+                return prev;
+            });
+            setSelectedSlot(null);
+            setOwnerForm({ name: '', email: '', phone: '' });
+            // Reload bookings to show the new one
+            if (user?.businessId) {
+                fetchBookings(user.businessId).then(setBookings).catch(console.error);
+            }
+        } catch {
+            // toast already shows error
+        } finally {
+            setBookingOwner(false);
+        }
+    }
+
     async function doUnblockSlot(slot: Slot) {
         setUnblockingId(slot.id);
         try {
@@ -164,7 +225,8 @@ export default function AgendaPage() {
     }
 
     const selectedBooking = selectedSlot
-        ? bookingBySlotId[selectedSlot.id]
+        ? (bookingByKey[selectedSlot.id] ??
+           bookingByKey[`${selectedSlot.serviceId}-${selectedSlot.date}-${selectedSlot.startTime}`])
         : null;
 
     return (
@@ -364,11 +426,11 @@ export default function AgendaPage() {
                                                             top: `${top}px`,
                                                             height: `${height}px`,
                                                         }}
-                                                        onClick={() =>
-                                                            setSelectedSlot(
-                                                                slot,
-                                                            )
-                                                        }
+                                                        onClick={() => {
+                                                            setSelectedSlot(slot);
+                                                            setOwnerForm({ name: '', email: '', phone: '' });
+                                                            setOwnerFormError('');
+                                                        }}
                                                     >
                                                         <p className="text-xs font-semibold leading-tight truncate">
                                                             {slot.startTime}
@@ -402,7 +464,7 @@ export default function AgendaPage() {
             {selectedSlot && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    onClick={() => setSelectedSlot(null)}
+                    onClick={() => { setSelectedSlot(null); setOwnerForm({ name: '', email: '', phone: '' }); setOwnerFormError(''); }}
                 >
                     <div className="absolute inset-0 bg-black/30" />
                     <Card
@@ -429,7 +491,7 @@ export default function AgendaPage() {
                             <div className="flex items-center gap-2">
                                 <Badge status={selectedSlot.status} />
                                 <button
-                                    onClick={() => setSelectedSlot(null)}
+                                    onClick={() => { setSelectedSlot(null); setOwnerForm({ name: '', email: '', phone: '' }); setOwnerFormError(''); }}
                                     className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                                 >
                                     <X className="w-5 h-5" />
@@ -484,15 +546,55 @@ export default function AgendaPage() {
 
                         {/* Action */}
                         {selectedSlot.status === "open" && (
-                            <div className="mt-5">
-                                <Button
-                                    variant="danger"
-                                    size="sm"
-                                    loading={blockingId === selectedSlot.id}
-                                    onClick={() => doBlockSlot(selectedSlot)}
-                                >
-                                    Bloquear turno
-                                </Button>
+                            <div className="mt-5 flex flex-col gap-4">
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                                        Cargar reserva manual
+                                    </p>
+                                    <div className="flex flex-col gap-3">
+                                        <Input
+                                            label="Nombre *"
+                                            placeholder="Nombre del cliente"
+                                            value={ownerForm.name}
+                                            onChange={(e) => {
+                                                setOwnerForm((f) => ({ ...f, name: e.target.value }));
+                                                if (ownerFormError) setOwnerFormError('');
+                                            }}
+                                            error={ownerFormError}
+                                        />
+                                        <Input
+                                            label="Email"
+                                            type="email"
+                                            placeholder="email@ejemplo.com"
+                                            value={ownerForm.email}
+                                            onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
+                                        />
+                                        <Input
+                                            label="Teléfono"
+                                            type="tel"
+                                            placeholder="+54 11 1234-5678"
+                                            value={ownerForm.phone}
+                                            onChange={(e) => setOwnerForm((f) => ({ ...f, phone: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        loading={bookingOwner}
+                                        onClick={() => doOwnerBooking(selectedSlot)}
+                                    >
+                                        Reservar
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        loading={blockingId === selectedSlot.id}
+                                        onClick={() => doBlockSlot(selectedSlot)}
+                                    >
+                                        Bloquear
+                                    </Button>
+                                </div>
                             </div>
                         )}
                         {selectedSlot.status === "blocked" && (
