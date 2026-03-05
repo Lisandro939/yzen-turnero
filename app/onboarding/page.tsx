@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const CATEGORIES: BusinessCategory[] = [
     "Barbería",
@@ -25,9 +26,13 @@ const CATEGORIES: BusinessCategory[] = [
 ];
 const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: c }));
 const DURATION_OPTIONS = [
+    { value: "20", label: "20 minutos" },
     { value: "30", label: "30 minutos" },
-    { value: "45", label: "45 minutos" },
+    { value: "40", label: "40 minutos" },
+    { value: "50", label: "50 minutos" },
     { value: "60", label: "60 minutos" },
+    { value: "90", label: "90 minutos" },
+    { value: "120", label: "2 horas" },
 ];
 const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -94,7 +99,7 @@ export default function OnboardingPage() {
     // Step 2 state
     const [svcName, setSvcName] = useState("");
     const [svcDescription, setSvcDescription] = useState("");
-    const [svcDuration, setSvcDuration] = useState<30 | 45 | 60>(30);
+    const [svcDuration, setSvcDuration] = useState<20 | 30 | 40 | 50 | 60 | 90 | 120>(30);
     const [svcPrice, setSvcPrice] = useState(0);
     const [svcDays, setSvcDays] = useState<number[]>([1, 2, 3, 4, 5]);
     const [svcStart, setSvcStart] = useState("09:00");
@@ -250,11 +255,9 @@ export default function OnboardingPage() {
                                 }
                                 error={step1Errors.description}
                             />
-                            <Input
-                                label="URL de imagen (opcional)"
-                                placeholder="https://..."
+                            <ImageUpload
                                 value={bizImageUrl}
-                                onChange={(e) => setBizImageUrl(e.target.value)}
+                                onChange={setBizImageUrl}
                             />
                             <Button type="submit" size="lg" className="w-full">
                                 Siguiente →
@@ -290,9 +293,7 @@ export default function OnboardingPage() {
                                     onChange={(e) =>
                                         setSvcDuration(
                                             Number(e.target.value) as
-                                                | 30
-                                                | 45
-                                                | 60,
+                                                | 20 | 30 | 40 | 50 | 60 | 90 | 120,
                                         )
                                     }
                                 />

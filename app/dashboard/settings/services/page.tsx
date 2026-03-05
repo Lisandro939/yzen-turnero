@@ -15,15 +15,19 @@ import { toast } from '@/lib/toast';
 
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const DURATION_OPTIONS = [
+  { value: '20', label: '20 minutos' },
   { value: '30', label: '30 minutos' },
-  { value: '45', label: '45 minutos' },
+  { value: '40', label: '40 minutos' },
+  { value: '50', label: '50 minutos' },
   { value: '60', label: '60 minutos' },
+  { value: '90', label: '90 minutos' },
+  { value: '120', label: '2 horas' },
 ];
 
 interface ServiceFormValues {
   name: string;
   description: string;
-  slotDuration: 30 | 45 | 60;
+  slotDuration: 20 | 30 | 40 | 50 | 60 | 90 | 120;
   basePrice: number;
   workingDays: number[];
   workingHoursStart: string;
@@ -102,7 +106,7 @@ function ServiceForm({
           label="Duración de turno"
           options={DURATION_OPTIONS}
           value={String(form.slotDuration)}
-          onChange={(e) => setForm({ ...form, slotDuration: Number(e.target.value) as 30 | 45 | 60 })}
+          onChange={(e) => setForm({ ...form, slotDuration: Number(e.target.value) as 20 | 30 | 40 | 50 | 60 | 90 | 120 })}
         />
         <Input
           label="Precio base ($)"

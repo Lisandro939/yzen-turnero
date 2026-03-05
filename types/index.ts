@@ -19,7 +19,7 @@ export interface Service {
   businessId: string;
   name: string;
   description: string;
-  slotDuration: 30 | 45 | 60;
+  slotDuration: 20 | 30 | 40 | 50 | 60 | 90 | 120;
   basePrice: number;
   workingDays: number[]; // 0=Dom … 6=Sáb
   workingHoursStart: string; // HH:MM
@@ -39,7 +39,7 @@ export interface Business {
   category: BusinessCategory;
   imageUrl: string;
   // Scheduling config
-  slotDuration: 30 | 45 | 60;
+  slotDuration: 20 | 30 | 40 | 50 | 60 | 90 | 120;
   basePrice: number;
   workingDays: number[]; // 0=Dom, 1=Lun, ..., 6=Sáb
   workingHoursStart: string; // HH:MM

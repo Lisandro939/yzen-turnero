@@ -17,7 +17,9 @@
       "Bash(pnpm run build)",
       "Bash(pnpm run db:migrate)",
       "WebFetch(domain:filofyapp.com)",
-      "Bash(pnpm add lucide-react)"
+      "Bash(pnpm add lucide-react)",
+      "Bash(pnpm add qrcode.react)",
+      "Bash(pnpm add cloudinary)"
     ]
   }
 }

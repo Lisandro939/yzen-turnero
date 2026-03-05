@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 export interface BusinessFormValues {
   name: string;
@@ -77,11 +78,9 @@ export function BusinessForm({ mode, initialValues, onSubmit, loading, submitLab
         onChange={(e) => setForm({ ...form, description: e.target.value })}
         error={errors.description}
       />
-      <Input
-        label="URL de imagen (opcional)"
-        placeholder="https://..."
+      <ImageUpload
         value={form.imageUrl}
-        onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+        onChange={(url) => setForm({ ...form, imageUrl: url })}
       />
 
       <Button type="submit" size="lg" loading={loading} className="w-full">
