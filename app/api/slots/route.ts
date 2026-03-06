@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, rowToService } from '@/lib/db';
-import { computeSlots } from '@/lib/schedule-utils';
+import { computeSlots, slotId } from '@/lib/schedule-utils';
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     for (const date of dates) {
       const [bookingsRes, blocksRes] = await Promise.all([
         db.execute({
-          sql: `SELECT slot_id FROM bookings WHERE service_id = ? AND date = ? AND status NOT IN ('cancelled','rejected')`,
+          sql: `SELECT start_time FROM bookings WHERE service_id = ? AND date = ? AND status NOT IN ('cancelled','rejected')`,
           args: [serviceId, date],
         }),
         db.execute({
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           args: [serviceId, date],
         }),
       ]);
-      const bookedIds = new Set<string>(bookingsRes.rows.map((r) => String((r as Record<string, unknown>).slot_id)));
+      const bookedIds = new Set<string>(bookingsRes.rows.map((r) => slotId(serviceId, date, String((r as Record<string, unknown>).start_time))));
       const blockedIds = new Set<string>(blocksRes.rows.map((r) => String((r as Record<string, unknown>).id)));
       allSlots.push(...computeSlots(service, service.businessId, date, bookedIds, blockedIds));
     }

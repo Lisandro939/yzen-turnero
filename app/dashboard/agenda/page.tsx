@@ -96,12 +96,15 @@ export default function AgendaPage() {
             .catch(console.error);
     }, [user?.businessId]);
 
-    // Load slots and bookings when selected service changes
+    // Load slots and bookings when selected service or week changes
     useEffect(() => {
         if (!user?.businessId || !selectedServiceId) return;
         setLoading(true);
         Promise.all([
-            fetchSlots(selectedServiceId, {}),
+            fetchSlots(selectedServiceId, {
+                dateFrom: toYMD(weekDates[0]),
+                dateTo: toYMD(weekDates[6]),
+            }),
             fetchBookings(user.businessId),
         ])
             .then(([s, b]) => {
@@ -110,7 +113,7 @@ export default function AgendaPage() {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [user?.businessId, selectedServiceId]);
+    }, [user?.businessId, selectedServiceId, weekDates]);
 
     const bookingByKey = useMemo(() => {
         const map: Record<string, Booking> = {};
@@ -545,7 +548,12 @@ export default function AgendaPage() {
                         ) : null}
 
                         {/* Action */}
-                        {selectedSlot.status === "open" && (
+                        {selectedSlot.date < today && (
+                            <p className="text-slate-400 text-xs pt-4 italic">
+                                Este turno ya pasó — solo lectura.
+                            </p>
+                        )}
+                        {selectedSlot.status === "open" && selectedSlot.date >= today && (
                             <div className="mt-5 flex flex-col gap-4">
                                 <div>
                                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
@@ -597,7 +605,7 @@ export default function AgendaPage() {
                                 </div>
                             </div>
                         )}
-                        {selectedSlot.status === "blocked" && (
+                        {selectedSlot.status === "blocked" && selectedSlot.date >= today && (
                             <div className="mt-5">
                                 <Button
                                     variant="secondary"
