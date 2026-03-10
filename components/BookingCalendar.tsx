@@ -8,6 +8,14 @@ interface BookingCalendarProps {
   slots: Slot[];
   businessSlug: string;
   disableBooking?: boolean;
+  brandColor?: string;
+}
+
+function hexAlpha(hex: string, alpha: number) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function formatDate(dateStr: string) {
@@ -15,7 +23,8 @@ function formatDate(dateStr: string) {
   return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-export function BookingCalendar({ slots, businessSlug, disableBooking }: BookingCalendarProps) {
+export function BookingCalendar({ slots, businessSlug, disableBooking, brandColor }: BookingCalendarProps) {
+  const brand = brandColor ?? '#818cf8';
   const dates = [...new Set(slots.map((s) => s.date))].sort();
   const [selectedDate, setSelectedDate] = useState(dates[0] ?? '');
 
@@ -32,18 +41,19 @@ export function BookingCalendar({ slots, businessSlug, disableBooking }: Booking
             <button
               key={date}
               onClick={() => setSelectedDate(date)}
-              className={`flex flex-col items-center px-4 py-3 rounded-xl border text-sm shrink-0 transition-all ${
-                isSelected
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-600'
-                  : 'border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-slate-800'
-              }`}
+              className="flex flex-col items-center px-4 py-3 rounded-xl border text-sm shrink-0 transition-all"
+              style={isSelected ? {
+                backgroundColor: hexAlpha(brand, 0.08),
+                borderColor: hexAlpha(brand, 0.5),
+                color: brand,
+              } : undefined}
             >
               <span className="font-medium capitalize">
                 {d.toLocaleDateString('es-AR', { weekday: 'short' })}
               </span>
               <span className="text-lg font-bold">{d.getDate()}</span>
               {hasOpen && !isSelected && (
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1" />
+                <span className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: brand }} />
               )}
             </button>
           );
@@ -57,7 +67,7 @@ export function BookingCalendar({ slots, businessSlug, disableBooking }: Booking
             <p className="text-slate-400 text-sm">No hay turnos para este día.</p>
           ) : (
             daySlots.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} businessSlug={businessSlug} disableBooking={disableBooking} />
+              <SlotCard key={slot.id} slot={slot} businessSlug={businessSlug} disableBooking={disableBooking} brandColor={brand} />
             ))
           )}
         </div>

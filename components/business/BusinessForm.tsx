@@ -13,6 +13,11 @@ export interface BusinessFormValues {
   category: BusinessCategory;
   description: string;
   imageUrl: string;
+  brandColor: string;
+  whatsapp: string;
+  instagram: string;
+  facebook: string;
+  twitter: string;
 }
 
 interface BusinessFormProps {
@@ -30,12 +35,28 @@ const CATEGORIES: BusinessCategory[] = [
 
 const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: c }));
 
+const PRESET_COLORS = [
+  '#818cf8', // indigo
+  '#60a5fa', // blue
+  '#34d399', // emerald
+  '#f472b6', // pink
+  '#fb923c', // orange
+  '#a78bfa', // violet
+  '#38bdf8', // sky
+  '#facc15', // yellow
+];
+
 function defaults(init?: Partial<Business>): BusinessFormValues {
   return {
     name: init?.name ?? '',
     category: init?.category ?? 'Otro',
     description: init?.description ?? '',
     imageUrl: init?.imageUrl ?? '',
+    brandColor: init?.brandColor ?? '#818cf8',
+    whatsapp: init?.whatsapp ?? '',
+    instagram: init?.instagram ?? '',
+    facebook: init?.facebook ?? '',
+    twitter: init?.twitter ?? '',
   };
 }
 
@@ -82,6 +103,80 @@ export function BusinessForm({ mode, initialValues, onSubmit, loading, submitLab
         value={form.imageUrl}
         onChange={(url) => setForm({ ...form, imageUrl: url })}
       />
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-slate-700">Color principal de la página</label>
+        <div className="flex items-center gap-2 flex-wrap">
+          {PRESET_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setForm({ ...form, brandColor: color })}
+              className="w-8 h-8 rounded-full border-2 transition-all shrink-0"
+              style={{
+                backgroundColor: color,
+                borderColor: form.brandColor === color ? '#1e293b' : 'transparent',
+                outline: form.brandColor === color ? `2px solid ${color}` : 'none',
+                outlineOffset: '2px',
+              }}
+              title={color}
+            />
+          ))}
+          <label
+            className="w-8 h-8 rounded-full border-2 border-slate-200 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center"
+            title="Color personalizado"
+            style={{ backgroundColor: PRESET_COLORS.includes(form.brandColor) ? undefined : form.brandColor }}
+          >
+            <input
+              type="color"
+              value={form.brandColor}
+              onChange={(e) => setForm({ ...form, brandColor: e.target.value })}
+              className="opacity-0 absolute w-1 h-1"
+            />
+            {PRESET_COLORS.includes(form.brandColor) && (
+              <span className="text-slate-400 text-lg leading-none select-none">+</span>
+            )}
+          </label>
+        </div>
+        <p className="text-xs text-slate-400">Se usa en tu página pública de reservas</p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <label className="text-sm font-medium text-slate-700">Redes sociales</label>
+        <p className="text-xs text-slate-400 -mt-1">Solo se muestran los que completes</p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500 w-24 shrink-0">WhatsApp</span>
+          <Input
+            placeholder="+5491123456789"
+            value={form.whatsapp}
+            onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500 w-24 shrink-0">Instagram</span>
+          <Input
+            placeholder="usuario (sin @)"
+            value={form.instagram}
+            onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500 w-24 shrink-0">Facebook</span>
+          <Input
+            placeholder="usuario o página"
+            value={form.facebook}
+            onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500 w-24 shrink-0">Twitter / X</span>
+          <Input
+            placeholder="usuario (sin @)"
+            value={form.twitter}
+            onChange={(e) => setForm({ ...form, twitter: e.target.value })}
+          />
+        </div>
+      </div>
 
       <Button type="submit" size="lg" loading={loading} className="w-full">
         {submitLabel ?? (mode === 'create' ? 'Crear negocio' : 'Guardar cambios')}

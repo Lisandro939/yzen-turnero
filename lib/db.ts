@@ -30,6 +30,11 @@ export function rowToBusiness(row: DbRow): Business {
     planExpiresAt: row.plan_expires_at != null ? String(row.plan_expires_at) : undefined,
     trialEndsAt: row.trial_ends_at != null ? String(row.trial_ends_at) : undefined,
     scheduleConfig: row.schedule_config != null ? JSON.parse(String(row.schedule_config)) : undefined,
+    brandColor: row.brand_color != null ? String(row.brand_color) : undefined,
+    whatsapp: row.whatsapp != null ? String(row.whatsapp) : undefined,
+    instagram: row.instagram != null ? String(row.instagram) : undefined,
+    facebook: row.facebook != null ? String(row.facebook) : undefined,
+    twitter: row.twitter != null ? String(row.twitter) : undefined,
   };
 }
 

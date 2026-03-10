@@ -79,6 +79,13 @@ async function migrate() {
     // Multi-service architecture
     `ALTER TABLE bookings ADD COLUMN service_id TEXT`,
     `ALTER TABLE slot_blocks ADD COLUMN service_id TEXT`,
+    // Branding
+    `ALTER TABLE businesses ADD COLUMN brand_color TEXT`,
+    // Social links
+    `ALTER TABLE businesses ADD COLUMN whatsapp TEXT`,
+    `ALTER TABLE businesses ADD COLUMN instagram TEXT`,
+    `ALTER TABLE businesses ADD COLUMN facebook TEXT`,
+    `ALTER TABLE businesses ADD COLUMN twitter TEXT`,
   ];
   for (const sql of alterStatements) {
     try {

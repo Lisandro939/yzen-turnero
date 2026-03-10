@@ -53,6 +53,13 @@ export interface Business {
   plan?: 'pro' | 'max';
   planExpiresAt?: string;
   trialEndsAt?: string;
+  // Branding
+  brandColor?: string;
+  // Social links
+  whatsapp?: string;   // phone number, e.g. +5491123456789
+  instagram?: string;  // handle without @
+  facebook?: string;   // page name / handle
+  twitter?: string;    // handle without @
 }
 
 export interface Slot {

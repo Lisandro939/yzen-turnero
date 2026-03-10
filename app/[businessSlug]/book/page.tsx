@@ -67,8 +67,10 @@ export default function BookPage() {
     );
   }
 
+  const brand = business.brandColor ?? '#818cf8';
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ backgroundColor: `${brand}26` }}>
       <Navbar />
       <div className="pt-24 max-w-lg mx-auto px-4 pb-24">
         <div className="mb-6">

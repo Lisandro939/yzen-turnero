@@ -20,6 +20,7 @@ export function BookingForm({
     businessSlug,
     business,
 }: BookingFormProps) {
+  const brand = business.brandColor ?? '#818cf8';
     const router = useRouter();
     const [form, setForm] = useState({ name: "", email: "", phone: "" });
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -136,7 +137,7 @@ export function BookingForm({
                 <p className="text-slate-600 text-sm">
                     {slot.startTime} – {slot.endTime}
                 </p>
-                <p className="text-indigo-500 font-semibold mt-1">
+                <p className="font-semibold mt-1" style={{ color: brand }}>
                     ${slot.price.toLocaleString("es-AR")}
                 </p>
             </Card>
@@ -177,6 +178,7 @@ export function BookingForm({
                 onClick={handlePay}
                 className="w-full"
                 disabled={!usesMP}
+                style={{ backgroundColor: brand }}
             >
                 {usesMP
                     ? `Pagar con Mercado Pago`

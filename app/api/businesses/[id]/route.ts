@@ -33,6 +33,11 @@ const FIELD_MAP: Record<keyof Omit<Business, 'id' | 'slug'>, string> = {
   plan: 'plan',
   planExpiresAt: 'plan_expires_at',
   trialEndsAt: 'trial_ends_at',
+  brandColor: 'brand_color',
+  whatsapp: 'whatsapp',
+  instagram: 'instagram',
+  facebook: 'facebook',
+  twitter: 'twitter',
 };
 
 export async function GET(_request: NextRequest, { params }: Context) {
