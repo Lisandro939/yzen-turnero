@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Calendar, Store } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 export default function WelcomePage() {
     const { user, markRoleChosen } = useAuth();
@@ -16,6 +17,24 @@ export default function WelcomePage() {
         else if (user.roleChosen && user.role === 'owner') router.replace('/dashboard');
         else if (user.roleChosen) router.replace('/customer');
     }, [user, router]);
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const cardsRef = useRef<HTMLDivElement>(null);
+
+    useGSAP(() => {
+        if (!user || user.roleChosen) return;
+        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+        tl.from(headerRef.current, { y: 20, opacity: 0, duration: 0.5 });
+        if (cardsRef.current) {
+            tl.from(cardsRef.current.children, {
+                y: 30,
+                opacity: 0,
+                duration: 0.5,
+                stagger: 0.15,
+            }, '-=0.2');
+        }
+    }, { scope: containerRef });
 
     if (!user || user.roleChosen) return null;
 
@@ -39,9 +58,9 @@ export default function WelcomePage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+        <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
             <div className="w-full max-w-lg">
-                <div className="text-center mb-10">
+                <div ref={headerRef} className="text-center mb-10">
                     <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
                         turnero<span className="text-indigo-400">.</span>
                     </Link>
@@ -53,7 +72,7 @@ export default function WelcomePage() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div ref={cardsRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Soy cliente */}
                     <button
                         onClick={() => handleChoose('customer')}

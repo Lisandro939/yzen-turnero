@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { fetchMyBookings } from '@/lib/api-client';
+import { gsap, useGSAP } from '@/lib/gsap';
 import type { MyBooking } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -64,6 +65,42 @@ export default function CustomerPage() {
             .finally(() => setLoading(false));
     }, []);
 
+    const contentRef = useRef<HTMLDivElement>(null);
+    const upcomingRef = useRef<HTMLDivElement>(null);
+    const pastRef = useRef<HTMLElement>(null);
+    const ctaRef = useRef<HTMLDivElement>(null);
+
+    useGSAP(() => {
+        if (loading) return;
+        if (upcomingRef.current && upcomingRef.current.children.length > 0) {
+            gsap.from(upcomingRef.current.children, {
+                y: 16,
+                opacity: 0,
+                duration: 0.4,
+                stagger: 0.08,
+                ease: 'power2.out',
+            });
+        }
+        if (pastRef.current) {
+            gsap.from(pastRef.current, {
+                y: 16,
+                opacity: 0,
+                duration: 0.4,
+                ease: 'power2.out',
+                delay: 0.2,
+            });
+        }
+        if (ctaRef.current) {
+            gsap.from(ctaRef.current, {
+                y: 16,
+                opacity: 0,
+                duration: 0.4,
+                ease: 'power2.out',
+                delay: 0.3,
+            });
+        }
+    }, { scope: contentRef, dependencies: [loading] });
+
     if (!user) return null;
 
     const firstName = user.name.split(' ')[0];
@@ -71,7 +108,7 @@ export default function CustomerPage() {
     const past = bookings.filter((b) => b.date < TODAY || b.status === 'cancelled');
 
     return (
-        <div className="space-y-8">
+        <div ref={contentRef} className="space-y-8">
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
@@ -101,7 +138,7 @@ export default function CustomerPage() {
                         </Link>
                     </Card>
                 ) : (
-                    <div className="space-y-3">
+                    <div ref={upcomingRef} className="space-y-3">
                         {upcoming.map((b) => <BookingCard key={b.id} booking={b} />)}
                     </div>
                 )}
@@ -109,7 +146,7 @@ export default function CustomerPage() {
 
             {/* Past bookings */}
             {!loading && past.length > 0 && (
-                <section>
+                <section ref={pastRef}>
                     <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                         Historial
                     </h2>
@@ -120,6 +157,7 @@ export default function CustomerPage() {
             )}
 
             {/* CTA — upgrade to business */}
+            <div ref={ctaRef}>
             <Card className="p-6 border-indigo-100 bg-indigo-50/40">
                 <p className="font-semibold text-slate-800 text-base">¿Tenés un negocio?</p>
                 <p className="text-slate-500 text-sm mt-1 mb-4">
@@ -129,6 +167,7 @@ export default function CustomerPage() {
                     <Button size="sm">Empezá gratis</Button>
                 </Link>
             </Card>
+            </div>
         </div>
     );
 }

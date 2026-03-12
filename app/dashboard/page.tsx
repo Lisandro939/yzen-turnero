@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { fetchServices, fetchSlots, fetchBookings } from "@/lib/api-client";
 import { getPlanStatus } from "@/lib/plan-utils";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { Slot, Booking } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -43,6 +44,12 @@ export default function DashboardPage() {
             .finally(() => setLoading(false));
     }, [bizId]);
 
+    const statsRef = useRef<HTMLDivElement>(null);
+    const countRef1 = useRef<HTMLParagraphElement>(null);
+    const countRef2 = useRef<HTMLParagraphElement>(null);
+    const countRef3 = useRef<HTMLParagraphElement>(null);
+    const bookingsListRef = useRef<HTMLDivElement>(null);
+
     const todayStr = today();
     const todaySlots = slots.filter((s) => s.date === todayStr);
     const todayBookings = bookings.filter((b) => b.date === todayStr);
@@ -51,6 +58,50 @@ export default function DashboardPage() {
     const revenue = todaySlots
         .filter((s) => s.status === "booked")
         .reduce((acc, s) => acc + s.price, 0);
+
+    // Animate stat cards + counters
+    useGSAP(() => {
+        if (loading || !statsRef.current) return;
+        gsap.from(statsRef.current.children, {
+            y: 20,
+            opacity: 0,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: 'power2.out',
+        });
+        // Counter animations
+        const counters = [
+            { ref: countRef1, target: todaySlots.length, prefix: '' },
+            { ref: countRef2, target: bookedCount, prefix: '' },
+            { ref: countRef3, target: revenue, prefix: '$' },
+        ];
+        counters.forEach(({ ref, target, prefix }) => {
+            if (!ref.current || target === 0) return;
+            const obj = { val: 0 };
+            gsap.to(obj, {
+                val: target,
+                duration: 0.8,
+                ease: 'power2.out',
+                snap: { val: 1 },
+                onUpdate: () => {
+                    if (ref.current) {
+                        ref.current.textContent = prefix + Math.round(obj.val).toLocaleString('es-AR');
+                    }
+                },
+            });
+        });
+        // Bookings list stagger
+        if (bookingsListRef.current && bookingsListRef.current.children.length > 0) {
+            gsap.from(bookingsListRef.current.children, {
+                y: 16,
+                opacity: 0,
+                duration: 0.4,
+                stagger: 0.06,
+                ease: 'power2.out',
+                delay: 0.3,
+            });
+        }
+    }, { dependencies: [loading] });
 
     return (
         <div className="w-full">
@@ -65,7 +116,7 @@ export default function DashboardPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            <div ref={statsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
                 {loading ? (
                     <>
                         <Card className="p-5">
@@ -85,13 +136,13 @@ export default function DashboardPage() {
                     <>
                         <Card className="p-5">
                             <p className="text-slate-400 text-sm">Turnos hoy</p>
-                            <p className="text-3xl font-bold text-slate-800 mt-1">
+                            <p ref={countRef1} className="text-3xl font-bold text-slate-800 mt-1">
                                 {todaySlots.length}
                             </p>
                         </Card>
                         <Card className="p-5">
                             <p className="text-slate-400 text-sm">Reservados</p>
-                            <p className="text-3xl font-bold text-indigo-400 mt-1">
+                            <p ref={countRef2} className="text-3xl font-bold text-indigo-400 mt-1">
                                 {bookedCount}
                             </p>
                         </Card>
@@ -99,7 +150,7 @@ export default function DashboardPage() {
                             <p className="text-slate-400 text-sm">
                                 Ingresos estimados
                             </p>
-                            <p className="text-3xl font-bold text-emerald-500 mt-1">
+                            <p ref={countRef3} className="text-3xl font-bold text-emerald-500 mt-1">
                                 ${revenue.toLocaleString("es-AR")}
                             </p>
                         </Card>
@@ -128,7 +179,7 @@ export default function DashboardPage() {
                     </p>
                 </Card>
             ) : (
-                <div className="flex flex-col gap-3">
+                <div ref={bookingsListRef} className="flex flex-col gap-3">
                     {todayBookings.map((booking) => (
                         <Card
                             key={booking.id}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { createService } from "@/lib/api-client";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { Business, BusinessCategory } from "@/types";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -86,8 +87,26 @@ export default function OnboardingPage() {
     const { user, upgradeToOwner } = useAuth();
     const router = useRouter();
     const [step, setStep] = useState<1 | 2>(1);
+    const prevStepRef = useRef<1 | 2>(1);
+    const formContainerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Animate step transitions
+    useGSAP(() => {
+        if (!formContainerRef.current) return;
+        const direction = step > prevStepRef.current ? 1 : -1;
+        prevStepRef.current = step;
+        gsap.fromTo(formContainerRef.current, {
+            x: 40 * direction,
+            opacity: 0,
+        }, {
+            x: 0,
+            opacity: 1,
+            duration: 0.35,
+            ease: 'power2.out',
+        });
+    }, { dependencies: [step] });
 
     // Step 1 state
     const [bizName, setBizName] = useState("");
@@ -218,6 +237,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <Card className="p-6 sm:p-8">
+                  <div ref={formContainerRef}>
                     {error && (
                         <p className="text-rose-600 text-sm bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-5">
                             {error}
@@ -379,6 +399,7 @@ export default function OnboardingPage() {
                             </div>
                         </form>
                     )}
+                  </div>
                 </Card>
             </div>
         </div>

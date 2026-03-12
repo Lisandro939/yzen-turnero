@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import {
     Check,
     X,
@@ -21,17 +22,88 @@ import type { Business } from "@/types";
 
 export default function HomePage() {
     const [businesses, setBusinesses] = useState<Business[]>([]);
+    const mainRef = useRef<HTMLDivElement>(null);
+    const heroRef = useRef<HTMLElement>(null);
+    const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
     useEffect(() => {
         fetchBusinesses().then(setBusinesses).catch(console.error);
     }, []);
 
+    useGSAP(() => {
+        // Hero entrance: stagger children
+        if (heroRef.current) {
+            const children = heroRef.current.querySelector('.max-w-2xl')?.children;
+            if (children) {
+                gsap.from(children, {
+                    y: 24,
+                    opacity: 0,
+                    duration: 0.7,
+                    stagger: 0.1,
+                    ease: 'power2.out',
+                });
+            }
+        }
+
+        // Scroll-reveal for each section
+        sectionRefs.current.forEach((section) => {
+            if (!section) return;
+            const grid = section.querySelector('.grid');
+            if (grid) {
+                // Animate section heading area first
+                const headingEls = Array.from(section.children).filter(
+                    (el) => !el.classList.contains('grid'),
+                );
+                if (headingEls.length) {
+                    gsap.from(headingEls, {
+                        y: 30,
+                        opacity: 0,
+                        duration: 0.6,
+                        ease: 'power2.out',
+                        scrollTrigger: {
+                            trigger: section,
+                            start: 'top 85%',
+                            once: true,
+                        },
+                    });
+                }
+                // Stagger grid children
+                gsap.from(grid.children, {
+                    y: 30,
+                    opacity: 0,
+                    duration: 0.6,
+                    stagger: 0.1,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: grid,
+                        start: 'top 85%',
+                        once: true,
+                    },
+                });
+            } else {
+                // Simple section (mockup, CTA, business list, footer)
+                gsap.from(section.children, {
+                    y: 30,
+                    opacity: 0,
+                    duration: 0.6,
+                    stagger: 0.08,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: section,
+                        start: 'top 85%',
+                        once: true,
+                    },
+                });
+            }
+        });
+    }, { scope: mainRef });
+
     return (
-        <div className="min-h-screen" style={{ background: "#f5f7ff" }}>
+        <div ref={mainRef} className="min-h-screen" style={{ background: "#f5f7ff" }}>
             <Navbar />
 
             {/* ── Hero ───────────────────────────────────────────────────── */}
-            <section className="pt-30 pb-20 px-4 text-center">
+            <section ref={heroRef} className="pt-30 pb-20 px-4 text-center">
                 <div className="max-w-2xl mx-auto">
                     <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 tracking-tight leading-[1.1] mb-5">
                         Dejá de perder turnos{" "}
@@ -58,7 +130,7 @@ export default function HomePage() {
             </section>
 
             {/* ── Demo mockup ────────────────────────────────────────────── */}
-            <section className="max-w-sm mx-auto px-4 pb-24">
+            <section ref={(el) => { sectionRefs.current[0] = el; }} className="max-w-sm mx-auto px-4 pb-24">
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                     <div className="bg-indigo-50 border-b border-slate-200 px-5 py-4 flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
@@ -124,7 +196,7 @@ export default function HomePage() {
             </section>
 
             {/* ── Problem vs Solution ────────────────────────────────────── */}
-            <section className="max-w-4xl mx-auto px-4 pb-24">
+            <section ref={(el) => { sectionRefs.current[1] = el; }} className="max-w-4xl mx-auto px-4 pb-24">
                 <h2 className="text-3xl font-bold text-slate-800 text-center mb-3">
                     El antes y el después
                 </h2>
@@ -180,7 +252,7 @@ export default function HomePage() {
             </section>
 
             {/* ── How it works ───────────────────────────────────────────── */}
-            <section className="max-w-4xl mx-auto px-4 pb-24">
+            <section ref={(el) => { sectionRefs.current[2] = el; }} className="max-w-4xl mx-auto px-4 pb-24">
                 <h2 className="text-3xl font-bold text-slate-800 text-center mb-3">
                     Empezá en 3 pasos
                 </h2>
@@ -224,7 +296,7 @@ export default function HomePage() {
             </section>
 
             {/* ── Features ───────────────────────────────────────────────── */}
-            <section className="max-w-4xl mx-auto px-4 pb-24">
+            <section ref={(el) => { sectionRefs.current[3] = el; }} className="max-w-4xl mx-auto px-4 pb-24">
                 <h2 className="text-3xl font-bold text-slate-800 text-center mb-3">
                     Todo lo que necesitás
                 </h2>
@@ -273,7 +345,7 @@ export default function HomePage() {
             </section>
 
             {/* ── CTA ────────────────────────────────────────────────────── */}
-            <section className="max-w-2xl mx-auto px-4 pb-32 text-center">
+            <section ref={(el) => { sectionRefs.current[4] = el; }} className="max-w-2xl mx-auto px-4 pb-32 text-center">
                 <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-10">
                     <h2 className="text-3xl font-bold text-slate-800 mb-3">
                         ¿Listo para ordenar tu agenda?
@@ -292,7 +364,7 @@ export default function HomePage() {
             </section>
 
             {/* ── Business list ──────────────────────────────────────────── */}
-            <section id="negocios" className="max-w-7xl mx-auto px-4 pb-24">
+            <section ref={(el) => { sectionRefs.current[5] = el; }} id="negocios" className="max-w-7xl mx-auto px-4 pb-24">
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">
                     Negocios en turnero
                 </h2>

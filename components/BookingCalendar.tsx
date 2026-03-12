@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Slot } from '@/types';
+import { gsap, useGSAP } from '@/lib/gsap';
 import { SlotCard } from './SlotCard';
 
 interface BookingCalendarProps {
@@ -27,8 +28,21 @@ export function BookingCalendar({ slots, businessSlug, disableBooking, brandColo
   const brand = brandColor ?? '#818cf8';
   const dates = [...new Set(slots.map((s) => s.date))].sort();
   const [selectedDate, setSelectedDate] = useState(dates[0] ?? '');
+  const slotsContainerRef = useRef<HTMLDivElement>(null);
 
   const daySlots = slots.filter((s) => s.date === selectedDate);
+
+  useGSAP(() => {
+    if (slotsContainerRef.current && slotsContainerRef.current.children.length > 0) {
+      gsap.from(slotsContainerRef.current.children, {
+        y: 12,
+        opacity: 0,
+        duration: 0.3,
+        stagger: 0.05,
+        ease: 'power2.out',
+      });
+    }
+  }, { dependencies: [selectedDate] });
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,7 +76,7 @@ export function BookingCalendar({ slots, businessSlug, disableBooking, brandColo
 
       <div>
         <h3 className="text-slate-700 font-semibold mb-4 capitalize">{formatDate(selectedDate)}</h3>
-        <div className="flex flex-col gap-3">
+        <div ref={slotsContainerRef} className="flex flex-col gap-3">
           {daySlots.length === 0 ? (
             <p className="text-slate-400 text-sm">No hay turnos para este día.</p>
           ) : (

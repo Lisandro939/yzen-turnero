@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import { fetchBusiness, fetchServices, fetchSlots } from '@/lib/api-client';
+import { gsap, useGSAP } from '@/lib/gsap';
 import type { Business, Service, Slot } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { BookingCalendar } from '@/components/BookingCalendar';
@@ -81,6 +82,18 @@ export default function BusinessPage() {
       .catch(console.error)
       .finally(() => setSlotsLoading(false));
   }, [selectedServiceId]);
+
+  // Animate booking panel reveal
+  useGSAP(() => {
+    if (showBooking && bookingRef.current) {
+      gsap.from(bookingRef.current, {
+        y: 30,
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power2.out',
+      });
+    }
+  }, { dependencies: [showBooking] });
 
   const businessLoading = business === undefined;
 

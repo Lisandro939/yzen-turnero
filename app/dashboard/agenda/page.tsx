@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAuth } from "@/lib/auth-context";
+import { gsap, useGSAP } from "@/lib/gsap";
 import {
     fetchServices,
     fetchSlots,
@@ -226,6 +227,34 @@ export default function AgendaPage() {
             setUnblockingId(null);
         }
     }
+
+    const modalOverlayRef = useRef<HTMLDivElement>(null);
+    const modalCardRef = useRef<HTMLDivElement>(null);
+
+    // Animate modal entrance
+    useGSAP(() => {
+        if (!selectedSlot || !modalOverlayRef.current || !modalCardRef.current) return;
+        gsap.from(modalOverlayRef.current, { opacity: 0, duration: 0.2, ease: 'power2.out' });
+        gsap.from(modalCardRef.current, { scale: 0.95, opacity: 0, duration: 0.25, ease: 'power2.out' });
+    }, { dependencies: [selectedSlot?.id] });
+
+    const closeModal = useCallback(() => {
+        if (modalOverlayRef.current && modalCardRef.current) {
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    setSelectedSlot(null);
+                    setOwnerForm({ name: '', email: '', phone: '' });
+                    setOwnerFormError('');
+                },
+            });
+            tl.to(modalCardRef.current, { scale: 0.95, opacity: 0, duration: 0.15, ease: 'power2.in' });
+            tl.to(modalOverlayRef.current, { opacity: 0, duration: 0.15, ease: 'power2.in' }, '<');
+        } else {
+            setSelectedSlot(null);
+            setOwnerForm({ name: '', email: '', phone: '' });
+            setOwnerFormError('');
+        }
+    }, []);
 
     const selectedBooking = selectedSlot
         ? (bookingByKey[selectedSlot.id] ??
@@ -466,13 +495,14 @@ export default function AgendaPage() {
             {/* Slot detail modal */}
             {selectedSlot && (
                 <div
+                    ref={modalOverlayRef}
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    onClick={() => { setSelectedSlot(null); setOwnerForm({ name: '', email: '', phone: '' }); setOwnerFormError(''); }}
+                    onClick={closeModal}
                 >
                     <div className="absolute inset-0 bg-black/30" />
+                    <div ref={modalCardRef} onClick={(e) => e.stopPropagation()}>
                     <Card
                         className="relative w-full max-w-md p-6"
-                        onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal header */}
                         <div className="flex items-start justify-between mb-4">
@@ -494,7 +524,7 @@ export default function AgendaPage() {
                             <div className="flex items-center gap-2">
                                 <Badge status={selectedSlot.status} />
                                 <button
-                                    onClick={() => { setSelectedSlot(null); setOwnerForm({ name: '', email: '', phone: '' }); setOwnerFormError(''); }}
+                                    onClick={closeModal}
                                     className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                                 >
                                     <X className="w-5 h-5" />
@@ -618,6 +648,7 @@ export default function AgendaPage() {
                             </div>
                         )}
                     </Card>
+                    </div>
                 </div>
             )}
         </div>
