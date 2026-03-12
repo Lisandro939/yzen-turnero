@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
               (id, slug, name, description, owner_name, owner_email, category,
                image_url, working_days, working_hours_start, working_hours_end,
                slot_duration, base_price, trial_ends_at, plan)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now', '+7 days'),'pro')`,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now', '+14 days'),'pro')`,
       args: [
         business.id, business.slug, business.name, business.description,
         business.ownerName, business.ownerEmail, business.category,
