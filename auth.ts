@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { db } from '@/lib/db';
+import { sendNewUserNotification } from '@/lib/mailer';
 
 const secure = process.env.NODE_ENV === 'production';
 
@@ -45,10 +46,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 try {
                     // Ensure user record exists on every sign-in (idempotent)
                     if (trigger === 'signIn') {
-                        await db.execute({
+                        const insertResult = await db.execute({
                             sql: 'INSERT OR IGNORE INTO users (email) VALUES (?)',
                             args: [token.email],
                         });
+                        if (insertResult.rowsAffected > 0) {
+                            sendNewUserNotification(token.email, token.name).catch((err) =>
+                                console.error('[auth] Failed to send new user email:', err)
+                            );
+                        }
                     }
                     // Determine role from businesses table
                     const bizResult = await db.execute({
