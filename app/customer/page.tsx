@@ -1,46 +1,55 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
-import { fetchMyBookings } from '@/lib/api-client';
-import { gsap, useGSAP } from '@/lib/gsap';
-import type { MyBooking } from '@/types';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { fetchMyBookings } from "@/lib/api-client";
+import { gsap, useGSAP } from "@/lib/gsap";
+import type { MyBooking } from "@/types";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
 function formatDate(date: string) {
-    return new Date(date + 'T00:00:00').toLocaleDateString('es-AR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
+    return new Date(date + "T00:00:00").toLocaleDateString("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
     });
 }
 
 function BookingCard({ booking }: { booking: MyBooking }) {
     const isPast = booking.date < TODAY;
     return (
-        <Card className={`p-4 flex items-start justify-between gap-4 ${isPast ? 'opacity-60' : ''}`}>
+        <Card
+            className={`p-4 flex items-start justify-between gap-4 ${isPast ? "opacity-60" : ""}`}
+        >
             <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-800 truncate">{booking.businessName}</p>
-                <p className="text-slate-500 text-sm truncate">{booking.service ?? 'Servicio'}</p>
+                <p className="font-semibold text-slate-800 truncate">
+                    {booking.businessName}
+                </p>
+                <p className="text-slate-500 text-sm truncate">
+                    {booking.service ?? "Servicio"}
+                </p>
                 <p className="text-slate-400 text-sm mt-1 capitalize">
-                    {formatDate(booking.date)} · {booking.startTime}–{booking.endTime}
+                    {formatDate(booking.date)} · {booking.startTime}–
+                    {booking.endTime}
                 </p>
                 <p className="text-indigo-500 text-sm font-semibold mt-0.5">
-                    ${booking.price.toLocaleString('es-AR')}
+                    ${booking.price.toLocaleString("es-AR")}
                 </p>
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
                 <Badge status={booking.status} />
                 {!isPast && (
                     <Link href={`/${booking.businessSlug}`}>
-                        <Button variant="secondary" size="sm">Reservar de nuevo</Button>
+                        <Button variant="secondary" size="sm">
+                            Reservar de nuevo
+                        </Button>
                     </Link>
                 )}
             </div>
@@ -55,7 +64,7 @@ export default function CustomerPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (user === null) router.replace('/auth/login');
+        if (user === null) router.replace("/auth/login");
     }, [user, router]);
 
     useEffect(() => {
@@ -70,42 +79,52 @@ export default function CustomerPage() {
     const pastRef = useRef<HTMLElement>(null);
     const ctaRef = useRef<HTMLDivElement>(null);
 
-    useGSAP(() => {
-        if (loading) return;
-        if (upcomingRef.current && upcomingRef.current.children.length > 0) {
-            gsap.from(upcomingRef.current.children, {
-                y: 16,
-                opacity: 0,
-                duration: 0.4,
-                stagger: 0.08,
-                ease: 'power2.out',
-            });
-        }
-        if (pastRef.current) {
-            gsap.from(pastRef.current, {
-                y: 16,
-                opacity: 0,
-                duration: 0.4,
-                ease: 'power2.out',
-                delay: 0.2,
-            });
-        }
-        if (ctaRef.current) {
-            gsap.from(ctaRef.current, {
-                y: 16,
-                opacity: 0,
-                duration: 0.4,
-                ease: 'power2.out',
-                delay: 0.3,
-            });
-        }
-    }, { scope: contentRef, dependencies: [loading] });
+    useGSAP(
+        () => {
+            if (loading) return;
+            if (
+                upcomingRef.current &&
+                upcomingRef.current.children.length > 0
+            ) {
+                gsap.from(upcomingRef.current.children, {
+                    y: 16,
+                    opacity: 0,
+                    duration: 0.4,
+                    stagger: 0.08,
+                    ease: "power2.out",
+                });
+            }
+            if (pastRef.current) {
+                gsap.from(pastRef.current, {
+                    y: 16,
+                    opacity: 0,
+                    duration: 0.4,
+                    ease: "power2.out",
+                    delay: 0.2,
+                });
+            }
+            if (ctaRef.current) {
+                gsap.from(ctaRef.current, {
+                    y: 16,
+                    opacity: 0,
+                    duration: 0.4,
+                    ease: "power2.out",
+                    delay: 0.3,
+                });
+            }
+        },
+        { scope: contentRef, dependencies: [loading] },
+    );
 
     if (!user) return null;
 
-    const firstName = user.name.split(' ')[0];
-    const upcoming = bookings.filter((b) => b.date >= TODAY && b.status !== 'cancelled');
-    const past = bookings.filter((b) => b.date < TODAY || b.status === 'cancelled');
+    const firstName = user.name.split(" ")[0];
+    const upcoming = bookings.filter(
+        (b) => b.date >= TODAY && b.status !== "cancelled",
+    );
+    const past = bookings.filter(
+        (b) => b.date < TODAY || b.status === "cancelled",
+    );
 
     return (
         <div ref={contentRef} className="space-y-8">
@@ -115,9 +134,13 @@ export default function CustomerPage() {
                     <h1 className="text-2xl font-bold text-slate-800">
                         Hola, {firstName}
                     </h1>
-                    <p className="text-slate-400 text-sm mt-0.5">Tus turnos reservados</p>
+                    <p className="text-slate-400 text-sm mt-0.5">
+                        Tus turnos reservados
+                    </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={logout}>Salir</Button>
+                <Button variant="ghost" size="sm" onClick={logout}>
+                    Salir
+                </Button>
             </div>
 
             {/* Upcoming bookings */}
@@ -132,14 +155,15 @@ export default function CustomerPage() {
                     </div>
                 ) : upcoming.length === 0 ? (
                     <Card className="p-8 text-center">
-                        <p className="text-slate-400 text-sm">No tenés turnos próximos.</p>
-                        <Link href="/" className="mt-4 inline-block">
-                            <Button variant="secondary" size="sm">Explorá negocios</Button>
-                        </Link>
+                        <p className="text-slate-400 text-sm">
+                            No tenés turnos próximos.
+                        </p>
                     </Card>
                 ) : (
                     <div ref={upcomingRef} className="space-y-3">
-                        {upcoming.map((b) => <BookingCard key={b.id} booking={b} />)}
+                        {upcoming.map((b) => (
+                            <BookingCard key={b.id} booking={b} />
+                        ))}
                     </div>
                 )}
             </section>
@@ -151,22 +175,27 @@ export default function CustomerPage() {
                         Historial
                     </h2>
                     <div className="space-y-3">
-                        {past.map((b) => <BookingCard key={b.id} booking={b} />)}
+                        {past.map((b) => (
+                            <BookingCard key={b.id} booking={b} />
+                        ))}
                     </div>
                 </section>
             )}
 
             {/* CTA — upgrade to business */}
             <div ref={ctaRef}>
-            <Card className="p-6 border-indigo-100 bg-indigo-50/40">
-                <p className="font-semibold text-slate-800 text-base">¿Tenés un negocio?</p>
-                <p className="text-slate-500 text-sm mt-1 mb-4">
-                    Empezá a recibir turnos online gratis. Configurá tu agenda en minutos.
-                </p>
-                <Link href="/onboarding">
-                    <Button size="sm">Empezá gratis</Button>
-                </Link>
-            </Card>
+                <Card className="p-6 border-indigo-100 bg-indigo-50/40">
+                    <p className="font-semibold text-slate-800 text-base">
+                        ¿Tenés un negocio?
+                    </p>
+                    <p className="text-slate-500 text-sm mt-1 mb-4">
+                        Empezá a recibir turnos online gratis. Configurá tu
+                        agenda en minutos.
+                    </p>
+                    <Link href="/onboarding">
+                        <Button size="sm">Empezá gratis</Button>
+                    </Link>
+                </Card>
             </div>
         </div>
     );
